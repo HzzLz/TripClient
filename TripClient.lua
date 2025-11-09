@@ -1,4 +1,4 @@
--- Gothbreach Click GUI Cheat v4.0
+-- Gothbreach Click GUI Cheat v4.1 FIXED
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -11,6 +11,7 @@ local CheatSettings = {
     Aimbot = {
         Enabled = false,
         TeamCheck = true,
+        WallCheck = true,
         FOV = 80,
         ShowFOV = true,
         Smoothness = 0.2,
@@ -29,8 +30,11 @@ local CheatSettings = {
     },
     
     AntiAim = {
-        Enabled = false,
-        Pitch = -89
+        Enabled = false
+    },
+    
+    GUI = {
+        Keybind = "RightShift"
     }
 }
 
@@ -56,6 +60,8 @@ MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
 MainFrame.Size = UDim2.new(0, 300, 0, 200)
 MainFrame.Visible = false
+MainFrame.Active = true
+MainFrame.Draggable = true
 
 local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 8)
@@ -108,26 +114,8 @@ function toggleClickGUI()
     MainFrame.Visible = ClickGUIVisible
     
     if ClickGUIVisible then
-        MainFrame.Position = UDim2.new(0.5, -150, 0.3, -100)
-        MainFrame.Size = UDim2.new(0, 300, 0, 0)
-        
-        local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-        local tween = TweenService:Create(MainFrame, tweenInfo, {
-            Size = UDim2.new(0, 300, 0, 200),
-            Position = UDim2.new(0.5, -150, 0.5, -100)
-        })
-        tween:Play()
-    else
-        local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In)
-        local tween = TweenService:Create(MainFrame, tweenInfo, {
-            Size = UDim2.new(0, 300, 0, 0),
-            Position = UDim2.new(0.5, -150, 0.3, -100)
-        })
-        tween:Play()
-        
-        tween.Completed:Connect(function()
-            MainFrame.Visible = false
-        end)
+        MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+        MainFrame.Size = UDim2.new(0, 300, 0, 200)
     end
 end
 
@@ -325,6 +313,7 @@ AimbotTab.BackgroundTransparency = 1
 AimbotTab.Size = UDim2.new(1, 0, 1, 0)
 AimbotTab.CanvasSize = UDim2.new(0, 0, 0, 0)
 AimbotTab.ScrollBarThickness = 3
+AimbotTab.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Parent = AimbotTab
@@ -340,6 +329,7 @@ VisualsTab.Size = UDim2.new(1, 0, 1, 0)
 VisualsTab.CanvasSize = UDim2.new(0, 0, 0, 0)
 VisualsTab.ScrollBarThickness = 3
 VisualsTab.Visible = false
+VisualsTab.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
 local VisualsLayout = Instance.new("UIListLayout")
 VisualsLayout.Parent = VisualsTab
@@ -355,6 +345,7 @@ MovementTab.Size = UDim2.new(1, 0, 1, 0)
 MovementTab.CanvasSize = UDim2.new(0, 0, 0, 0)
 MovementTab.ScrollBarThickness = 3
 MovementTab.Visible = false
+MovementTab.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
 local MovementLayout = Instance.new("UIListLayout")
 MovementLayout.Parent = MovementTab
@@ -387,6 +378,10 @@ createToggle("Team Check", "Проверка команды", function(state)
     CheatSettings.ESP.TeamCheck = state
 end, AimbotTab)
 
+createToggle("Wall Check", "Проверка стен", function(state)
+    CheatSettings.Aimbot.WallCheck = state
+end, AimbotTab)
+
 -- Visuals Tab
 createToggle("Enable ESP", "Включить ESP", function(state)
     CheatSettings.ESP.Enabled = state
@@ -413,6 +408,23 @@ createToggle("Anti-Aim", "Защита от хедшотов", function(state)
     CheatSettings.AntiAim.Enabled = state
     updateAntiAim()
 end, MovementTab)
+
+-- Exit Button
+local ExitButton = Instance.new("TextButton")
+ExitButton.Name = "ExitButton"
+ExitButton.Parent = MainFrame
+ExitButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+ExitButton.BorderSizePixel = 0
+ExitButton.Position = UDim2.new(0, 10, 1, -30)
+ExitButton.Size = UDim2.new(1, -20, 0, 25)
+ExitButton.Font = Enum.Font.GothamBold
+ExitButton.Text = "EXIT"
+ExitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ExitButton.TextSize = 12
+
+local ExitCorner = Instance.new("UICorner")
+ExitCorner.CornerRadius = UDim.new(0, 5)
+ExitCorner.Parent = ExitButton
 
 -- Создание кнопок переключения вкладок
 local TabButtons = Instance.new("Frame")
@@ -461,13 +473,20 @@ CloseButton.MouseButton1Click:Connect(function()
     toggleClickGUI()
 end)
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    if input.KeyCode == Enum.KeyCode.RightShift then
-        toggleClickGUI()
-    end
+ExitButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+    if FOVCircle then FOVCircle:Remove() end
+    if aimbotConnection then aimbotConnection:Disconnect() end
+    stopThirdPerson()
+    stopAntiAim()
+    clearAllESP()
+    print("Gothbreach Cheat - EXITED")
 end)
+
+-- Функции биндов
+function setGUIKeybind(key)
+    CheatSettings.GUI.Keybind = key
+end
 
 -- Функции чита
 -- FOV Circle
@@ -492,6 +511,32 @@ function updateFOVCircle()
     FOVCircle.Color = CheatSettings.Aimbot.Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 end
 
+-- Проверка стен
+function isVisible(targetPart)
+    if not CheatSettings.Aimbot.WallCheck then return true end
+    if not LocalPlayer.Character then return false end
+    
+    local head = LocalPlayer.Character:FindFirstChild("Head")
+    if not head then return false end
+    
+    local origin = head.Position
+    local target = targetPart.Position
+    local direction = (target - origin).Unit * (origin - target).Magnitude
+    
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+    
+    local raycastResult = workspace:Raycast(origin, direction, raycastParams)
+    
+    if raycastResult then
+        local hitPart = raycastResult.Instance
+        return hitPart:IsDescendantOf(targetPart.Parent)
+    end
+    
+    return true
+end
+
 -- Third Person
 function updateThirdPerson()
     if CheatSettings.Visuals.ThirdPerson then
@@ -510,10 +555,14 @@ function updateThirdPerson()
             end
         end)
     else
-        RunService:UnbindFromRenderStep("ThirdPerson")
-        if originalCameraType then
-            Camera.CameraType = originalCameraType
-        end
+        stopThirdPerson()
+    end
+end
+
+function stopThirdPerson()
+    RunService:UnbindFromRenderStep("ThirdPerson")
+    if originalCameraType then
+        Camera.CameraType = originalCameraType
     end
 end
 
@@ -526,19 +575,23 @@ function updateAntiAim()
                 local rootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                 
                 if rootPart then
-                    -- Фиксируем голову близко к телу (защита от хедшотов)
                     head.CFrame = rootPart.CFrame * CFrame.new(0, 1.5, 0)
                 end
             end
         end)
     else
-        RunService:UnbindFromRenderStep("AntiAim")
+        stopAntiAim()
     end
 end
 
--- Аимбот (упрощенная версия)
+function stopAntiAim()
+    RunService:UnbindFromRenderStep("AntiAim")
+end
+
+-- Аимбот
 function isEnemy(player)
     if not CheatSettings.Aimbot.TeamCheck then return true end
+    if not player.Team then return true end
     return player.Team ~= LocalPlayer.Team
 end
 
@@ -568,7 +621,7 @@ function startAimbot()
                     local character = player.Character
                     local aimPart = character and character:FindFirstChild(CheatSettings.Aimbot.AimPart)
                     
-                    if aimPart then
+                    if aimPart and isVisible(aimPart) then
                         local screenPos, onScreen = Camera:WorldToViewportPoint(aimPart.Position)
                         
                         if onScreen then
@@ -602,7 +655,7 @@ function startAimbot()
     end)
 end
 
--- ESP (упрощенная версия)
+-- ESP
 function createSkeleton(player)
     if ESPObjects[player] then return end
     
@@ -610,7 +663,6 @@ function createSkeleton(player)
     if not character then return end
     
     local lines = {}
-    local connections = {}
     
     local boneConnections = {
         {"Head", "UpperTorso"},
@@ -680,10 +732,14 @@ function clearESP(player)
     ESPObjects[player] = nil
 end
 
-function startESP()
+function clearAllESP()
     for player in pairs(ESPObjects) do
         clearESP(player)
     end
+end
+
+function startESP()
+    clearAllESP()
     
     if not CheatSettings.ESP.Enabled then return end
     
@@ -694,22 +750,27 @@ function startESP()
     end
 end
 
--- Автоматическое обновление размеров контента
-UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    AimbotTab.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
-end)
-
-VisualsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    VisualsTab.CanvasSize = UDim2.new(0, 0, 0, VisualsLayout.AbsoluteContentSize.Y)
-end)
-
-MovementLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    MovementTab.CanvasSize = UDim2.new(0, 0, 0, MovementLayout.AbsoluteContentSize.Y)
+-- Бинды
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.KeyCode == Enum.KeyCode[CheatSettings.GUI.Keybind] then
+        toggleClickGUI()
+    end
 end)
 
 -- Запуск
 createFOVCircle()
 startAimbot()
+toggleClickGUI() -- Авто-открытие при запуске
 
-print("🎯 Gothbreach Click GUI v4.0 LOADED!")
+print("🎯 Gothbreach Click GUI v4.1 LOADED!")
 print("RightShift - Open/Close GUI")
+print("EXIT button - Close cheat completely")
+
+-- Экспорт функций для биндов
+return {
+    toggleGUI = toggleClickGUI,
+    setGUIKeybind = setGUIKeybind,
+    getSettings = function() return CheatSettings end
+}
