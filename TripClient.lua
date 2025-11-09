@@ -1,42 +1,74 @@
 -- Neverlose.lua Style Cheat Menu for Roblox
--- Fixed Version with Working Features + Insert Bind
+-- Fixed Version with Working Menu
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
-local Lighting = game:GetService("Lighting")
-local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local Camera = Workspace.CurrentCamera
 
--- Neverlose inspired UI Library
-local Neverlose = {}
+-- Cheat Functions
+local Cheats = {
+    SilentAim = {
+        Enabled = false,
+        FOV = 50,
+        TeamCheck = true,
+        WallCheck = true,
+        AutoShoot = true,
+        HitPart = "Head"
+    },
+    Movement = {
+        Speed = false,
+        SpeedValue = 25,
+        BunnyHop = false
+    },
+    AntiAim = {
+        Enabled = false,
+        Type = "Jitter"
+    },
+    ESP = {
+        Enabled = false,
+        Box = true,
+        Skeleton = true,
+        Names = true,
+        Distance = true
+    }
+}
 
-function Neverlose:CreateWindow(name)
-    local Neverlose = {}
-    
+-- ESP Variables
+local ESPObjects = {}
+local Connections = {}
+
+-- Menu Variables
+local ScreenGui = nil
+local MainFrame = nil
+local MenuVisible = false
+
+-- Create GUI Function
+local function CreateGUI()
+    -- Check if GUI already exists
+    if ScreenGui then
+        ScreenGui:Destroy()
+    end
+
     -- Main GUI
-    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "NeverloseUI"
     ScreenGui.Parent = game.CoreGui
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    
+
     -- Main Frame
-    local MainFrame = Instance.new("Frame")
+    MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
     MainFrame.Size = UDim2.new(0, 600, 0, 450)
     MainFrame.Position = UDim2.new(0.5, -300, 0.5, -225)
     MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
     MainFrame.BorderSizePixel = 0
-    MainFrame.Visible = false -- Start hidden
+    MainFrame.Visible = false
     MainFrame.Parent = ScreenGui
-    
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 8)
-    UICorner.Parent = MainFrame
-    
+
     -- Header
     local Header = Instance.new("Frame")
     Header.Name = "Header"
@@ -44,23 +76,19 @@ function Neverlose:CreateWindow(name)
     Header.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
     Header.BorderSizePixel = 0
     Header.Parent = MainFrame
-    
-    local HeaderCorner = Instance.new("UICorner")
-    HeaderCorner.CornerRadius = UDim.new(0, 8)
-    HeaderCorner.Parent = Header
-    
+
     local Title = Instance.new("TextLabel")
     Title.Name = "Title"
     Title.Size = UDim2.new(0, 200, 1, 0)
     Title.Position = UDim2.new(0, 10, 0, 0)
     Title.BackgroundTransparency = 1
-    Title.Text = name
+    Title.Text = "Neverlose Roblox"
     Title.TextColor3 = Color3.fromRGB(255, 255, 255)
     Title.Font = Enum.Font.GothamBold
     Title.TextSize = 14
     Title.TextXAlignment = Enum.TextXAlignment.Left
     Title.Parent = Header
-    
+
     -- Close Button
     local CloseButton = Instance.new("TextButton")
     CloseButton.Name = "CloseButton"
@@ -73,15 +101,11 @@ function Neverlose:CreateWindow(name)
     CloseButton.Font = Enum.Font.GothamBold
     CloseButton.TextSize = 14
     CloseButton.Parent = Header
-    
-    local CloseCorner = Instance.new("UICorner")
-    CloseCorner.CornerRadius = UDim.new(0, 6)
-    CloseCorner.Parent = CloseButton
-    
+
     CloseButton.MouseButton1Click:Connect(function()
         ToggleMenu()
     end)
-    
+
     -- Tabs Container
     local TabsContainer = Instance.new("Frame")
     TabsContainer.Name = "TabsContainer"
@@ -90,11 +114,7 @@ function Neverlose:CreateWindow(name)
     TabsContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
     TabsContainer.BorderSizePixel = 0
     TabsContainer.Parent = MainFrame
-    
-    local TabsCorner = Instance.new("UICorner")
-    TabsCorner.CornerRadius = UDim.new(0, 8)
-    TabsCorner.Parent = TabsContainer
-    
+
     -- Content Container
     local ContentContainer = Instance.new("Frame")
     ContentContainer.Name = "ContentContainer"
@@ -103,15 +123,12 @@ function Neverlose:CreateWindow(name)
     ContentContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
     ContentContainer.BorderSizePixel = 0
     ContentContainer.Parent = MainFrame
-    
-    local ContentCorner = Instance.new("UICorner")
-    ContentCorner.CornerRadius = UDim.new(0, 8)
-    ContentCorner.Parent = ContentContainer
-    
+
+    -- Create Tabs
     local Tabs = {}
     local CurrentTab = nil
-    
-    function Neverlose:CreateTab(name)
+
+    local function CreateTab(name)
         local Tab = {}
         
         local TabButton = Instance.new("TextButton")
@@ -125,10 +142,6 @@ function Neverlose:CreateWindow(name)
         TabButton.Font = Enum.Font.Gotham
         TabButton.TextSize = 12
         TabButton.Parent = TabsContainer
-        
-        local TabCorner = Instance.new("UICorner")
-        TabCorner.CornerRadius = UDim.new(0, 6)
-        TabCorner.Parent = TabButton
         
         local TabContent = Instance.new("ScrollingFrame")
         TabContent.Name = name .. "Content"
@@ -177,10 +190,6 @@ function Neverlose:CreateWindow(name)
             SectionFrame.BorderSizePixel = 0
             SectionFrame.Parent = TabContent
             
-            local SectionCorner = Instance.new("UICorner")
-            SectionCorner.CornerRadius = UDim.new(0, 6)
-            SectionCorner.Parent = SectionFrame
-            
             local SectionLabel = Instance.new("TextLabel")
             SectionLabel.Name = "SectionLabel"
             SectionLabel.Size = UDim2.new(1, -10, 1, 0)
@@ -214,10 +223,6 @@ function Neverlose:CreateWindow(name)
                 ToggleButton.TextSize = 11
                 ToggleButton.Parent = ToggleFrame
                 
-                local ToggleCorner = Instance.new("UICorner")
-                ToggleCorner.CornerRadius = UDim.new(0, 4)
-                ToggleCorner.Parent = ToggleButton
-                
                 local ToggleIndicator = Instance.new("Frame")
                 ToggleIndicator.Name = "ToggleIndicator"
                 ToggleIndicator.Size = UDim2.new(0, 20, 0, 20)
@@ -226,10 +231,6 @@ function Neverlose:CreateWindow(name)
                 ToggleIndicator.BorderSizePixel = 0
                 ToggleIndicator.Parent = ToggleFrame
                 
-                local IndicatorCorner = Instance.new("UICorner")
-                IndicatorCorner.CornerRadius = UDim.new(0, 4)
-                IndicatorCorner.Parent = ToggleIndicator
-                
                 local State = default
                 
                 ToggleButton.MouseButton1Click:Connect(function()
@@ -237,13 +238,6 @@ function Neverlose:CreateWindow(name)
                     ToggleIndicator.BackgroundColor3 = State and Color3.fromRGB(60, 180, 80) or Color3.fromRGB(80, 80, 90)
                     callback(State)
                 end)
-                
-                Toggle.State = State
-                Toggle.Update = function(self, value)
-                    State = value
-                    ToggleIndicator.BackgroundColor3 = State and Color3.fromRGB(60, 180, 80) or Color3.fromRGB(80, 80, 90)
-                    callback(State)
-                end
                 
                 return Toggle
             end
@@ -277,20 +271,12 @@ function Neverlose:CreateWindow(name)
                 SliderBar.BorderSizePixel = 0
                 SliderBar.Parent = SliderFrame
                 
-                local BarCorner = Instance.new("UICorner")
-                BarCorner.CornerRadius = UDim.new(1, 0)
-                BarCorner.Parent = SliderBar
-                
                 local SliderFill = Instance.new("Frame")
                 SliderFill.Name = "SliderFill"
                 SliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
                 SliderFill.BackgroundColor3 = Color3.fromRGB(60, 100, 180)
                 SliderFill.BorderSizePixel = 0
                 SliderFill.Parent = SliderBar
-                
-                local FillCorner = Instance.new("UICorner")
-                FillCorner.CornerRadius = UDim.new(1, 0)
-                FillCorner.Parent = SliderFill
                 
                 local SliderButton = Instance.new("TextButton")
                 SliderButton.Name = "SliderButton"
@@ -300,10 +286,6 @@ function Neverlose:CreateWindow(name)
                 SliderButton.BorderSizePixel = 0
                 SliderButton.Text = ""
                 SliderButton.Parent = SliderBar
-                
-                local ButtonCorner = Instance.new("UICorner")
-                ButtonCorner.CornerRadius = UDim.new(1, 0)
-                ButtonCorner.Parent = SliderButton
                 
                 local Value = default
                 local Dragging = false
@@ -344,7 +326,71 @@ function Neverlose:CreateWindow(name)
         
         return Tab
     end
-    
+
+    -- Create actual tabs
+    local RageTab = CreateTab("Rage")
+    local AimSection = RageTab:CreateSection("Aimbot")
+
+    local SilentAimToggle = AimSection:CreateToggle("Silent Aim", false, function(state)
+        Cheats.SilentAim.Enabled = state
+        print("Silent Aim:", state)
+    end)
+
+    local TeamCheckToggle = AimSection:CreateToggle("Team Check", true, function(state)
+        Cheats.SilentAim.TeamCheck = state
+    end)
+
+    local WallCheckToggle = AimSection:CreateToggle("Wall Check", true, function(state)
+        Cheats.SilentAim.WallCheck = state
+    end)
+
+    local AutoShootToggle = AimSection:CreateToggle("Auto Shoot", true, function(state)
+        Cheats.SilentAim.AutoShoot = state
+    end)
+
+    local FOVSlider = AimSection:CreateSlider("FOV", 10, 300, 50, function(value)
+        Cheats.SilentAim.FOV = value
+    end)
+
+    -- Movement Tab
+    local MovementTab = CreateTab("Movement")
+    local SpeedSection = MovementTab:CreateSection("Speed")
+
+    local SpeedToggle = SpeedSection:CreateToggle("Speed Hack", false, function(state)
+        Cheats.Movement.Speed = state
+        print("Speed Hack:", state)
+    end)
+
+    local SpeedSlider = SpeedSection:CreateSlider("Speed Value", 10, 100, 25, function(value)
+        Cheats.Movement.SpeedValue = value
+    end)
+
+    local BunnyToggle = SpeedSection:CreateToggle("Bunny Hop", false, function(state)
+        Cheats.Movement.BunnyHop = state
+        ToggleBunnyHop()
+    end)
+
+    -- Visuals Tab
+    local VisualsTab = CreateTab("Visuals")
+    local ESPSection = VisualsTab:CreateSection("ESP")
+
+    local ESPToggle = ESPSection:CreateToggle("ESP", false, function(state)
+        Cheats.ESP.Enabled = state
+        if state then
+            CreateESP()
+        else
+            ClearESP()
+        end
+    end)
+
+    local BoxToggle = ESPSection:CreateToggle("Box ESP", true, function(state)
+        Cheats.ESP.Box = state
+    end)
+
+    local SkeletonToggle = ESPSection:CreateToggle("Skeleton", true, function(state)
+        Cheats.ESP.Skeleton = state
+    end)
+
     -- Make window draggable
     local Dragging = false
     local DragInput, DragStart, StartPos
@@ -375,177 +421,29 @@ function Neverlose:CreateWindow(name)
             MainFrame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
         end
     end)
-    
-    Neverlose.MainFrame = MainFrame
-    Neverlose.ScreenGui = ScreenGui
-    
-    return Neverlose
-end
 
--- Cheat Functions
-local Cheats = {
-    SilentAim = {
-        Enabled = false,
-        FOV = 50,
-        TeamCheck = true,
-        WallCheck = true,
-        AutoShoot = true,
-        HitPart = "Head"
-    },
-    Movement = {
-        Speed = false,
-        SpeedValue = 25,
-        BunnyHop = false
-    },
-    AntiAim = {
-        Enabled = false,
-        Type = "Jitter"
-    },
-    ESP = {
-        Enabled = false,
-        Box = true,
-        Skeleton = true,
-        Names = true,
-        Distance = true
-    }
-}
-
--- ESP Variables
-local ESPObjects = {}
-local Connections = {}
-
--- Menu Toggle Variables
-local MenuVisible = false
-local NeverloseUI = nil
-
--- Initialize UI
-local function InitializeUI()
-    NeverloseUI = Neverlose:CreateWindow("Neverlose Roblox")
-    
-    -- Rage Tab
-    local RageTab = NeverloseUI:CreateTab("Rage")
-    local AimSection = RageTab:CreateSection("Aimbot")
-
-    local SilentAimToggle = AimSection:CreateToggle("Silent Aim", false, function(state)
-        Cheats.SilentAim.Enabled = state
-    end)
-
-    local TeamCheckToggle = AimSection:CreateToggle("Team Check", true, function(state)
-        Cheats.SilentAim.TeamCheck = state
-    end)
-
-    local WallCheckToggle = AimSection:CreateToggle("Wall Check", true, function(state)
-        Cheats.SilentAim.WallCheck = state
-    end)
-
-    local AutoShootToggle = AimSection:CreateToggle("Auto Shoot", true, function(state)
-        Cheats.SilentAim.AutoShoot = state
-    end)
-
-    local FOVSlider = AimSection:CreateSlider("FOV", 10, 300, 50, function(value)
-        Cheats.SilentAim.FOV = value
-    end)
-
-    -- Movement Tab
-    local MovementTab = NeverloseUI:CreateTab("Movement")
-    local SpeedSection = MovementTab:CreateSection("Speed")
-
-    local SpeedToggle = SpeedSection:CreateToggle("Speed Hack", false, function(state)
-        Cheats.Movement.Speed = state
-    end)
-
-    local SpeedSlider = SpeedSection:CreateSlider("Speed Value", 10, 100, 25, function(value)
-        Cheats.Movement.SpeedValue = value
-    end)
-
-    local BunnyToggle = SpeedSection:CreateToggle("Bunny Hop", false, function(state)
-        Cheats.Movement.BunnyHop = state
-        ToggleBunnyHop()
-    end)
-
-    -- Visuals Tab
-    local VisualsTab = NeverloseUI:CreateTab("Visuals")
-    local ESPSection = VisualsTab:CreateSection("ESP")
-
-    local ESPToggle = ESPSection:CreateToggle("ESP", false, function(state)
-        Cheats.ESP.Enabled = state
-        if state then
-            CreateESP()
-        else
-            ClearESP()
-        end
-    end)
-
-    local BoxToggle = ESPSection:CreateToggle("Box ESP", true, function(state)
-        Cheats.ESP.Box = state
-        if not state then
-            ClearESP()
-            if Cheats.ESP.Enabled then
-                CreateESP()
-            end
-        end
-    end)
-
-    local SkeletonToggle = ESPSection:CreateToggle("Skeleton", true, function(state)
-        Cheats.ESP.Skeleton = state
-        if not state then
-            ClearESP()
-            if Cheats.ESP.Enabled then
-                CreateESP()
-            end
-        end
-    end)
-
-    local NamesToggle = ESPSection:CreateToggle("Names", true, function(state)
-        Cheats.ESP.Names = state
-        if not state then
-            ClearESP()
-            if Cheats.ESP.Enabled then
-                CreateESP()
-            end
-        end
-    end)
-
-    local DistanceToggle = ESPSection:CreateToggle("Distance", true, function(state)
-        Cheats.ESP.Distance = state
-        if not state then
-            ClearESP()
-            if Cheats.ESP.Enabled then
-                CreateESP()
-            end
-        end
-    end)
-
-    -- Anti-Aim Tab
-    local AATab = NeverloseUI:CreateTab("Anti-Aim")
-    local AASection = AATab:CreateSection("Anti-Aim")
-
-    local AAToggle = AASection:CreateToggle("Anti-Aim", false, function(state)
-        Cheats.AntiAim.Enabled = state
-    end)
+    print("GUI Created Successfully!")
 end
 
 -- Menu Toggle Function
 local function ToggleMenu()
-    MenuVisible = not MenuVisible
+    if not MainFrame then
+        CreateGUI()
+    end
     
-    if NeverloseUI and NeverloseUI.MainFrame then
-        NeverloseUI.MainFrame.Visible = MenuVisible
-        
-        if MenuVisible then
-            -- Smooth show animation
-            NeverloseUI.MainFrame.Position = UDim2.new(0.5, -300, 0.5, -225)
-        else
-            -- Smooth hide animation
-            NeverloseUI.MainFrame.Position = UDim2.new(0.5, -300, 0.5, -225)
-        end
+    MenuVisible = not MenuVisible
+    MainFrame.Visible = MenuVisible
+    
+    if MenuVisible then
+        print("Menu Opened")
+    else
+        print("Menu Closed")
     end
 end
 
 -- Insert Key Bind
-local InsertConnection
 local function SetupInsertBind()
-    InsertConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
         
         if input.KeyCode == Enum.KeyCode.Insert then
@@ -574,41 +472,26 @@ end
 function AddESP(player)
     local ESP = {
         Box = nil,
-        Skeleton = {},
-        Name = nil,
-        Distance = nil
+        Skeleton = {}
     }
     
     ESPObjects[player] = ESP
     
     local CharacterAdded
     CharacterAdded = player.CharacterAdded:Connect(function(character)
-        wait(1) -- Wait for character to load
+        wait(1)
         
-        -- Create Box ESP
         if Cheats.ESP.Box then
             CreateBoxESP(character, player)
         end
         
-        -- Create Skeleton ESP
         if Cheats.ESP.Skeleton then
             CreateSkeletonESP(character, player)
-        end
-        
-        -- Create Name ESP
-        if Cheats.ESP.Names then
-            CreateNameESP(character, player)
-        end
-        
-        -- Create Distance ESP
-        if Cheats.ESP.Distance then
-            CreateDistanceESP(character, player)
         end
     end)
     
     table.insert(Connections, CharacterAdded)
     
-    -- Handle existing character
     if player.Character then
         local character = player.Character
         
@@ -619,14 +502,6 @@ function AddESP(player)
         if Cheats.ESP.Skeleton then
             CreateSkeletonESP(character, player)
         end
-        
-        if Cheats.ESP.Names then
-            CreateNameESP(character, player)
-        end
-        
-        if Cheats.ESP.Distance then
-            CreateDistanceESP(character, player)
-        end
     end
 end
 
@@ -634,17 +509,24 @@ function CreateBoxESP(character, player)
     local ESP = ESPObjects[player]
     if not ESP then return end
     
-    local Box = Instance.new("BoxHandleAdornment")
-    Box.Name = "ESPBox"
-    Box.Adornee = character:FindFirstChild("HumanoidRootPart") or character:WaitForChild("HumanoidRootPart", 5)
-    Box.Size = Vector3.new(4, 6, 1)
-    Box.Color3 = player.Team == LocalPlayer.Team and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    Box.Transparency = 0.7
-    Box.AlwaysOnTop = true
-    Box.ZIndex = 1
-    Box.Parent = character
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then
+        humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
+    end
     
-    ESP.Box = Box
+    if humanoidRootPart then
+        local Box = Instance.new("BoxHandleAdornment")
+        Box.Name = "ESPBox"
+        Box.Adornee = humanoidRootPart
+        Box.Size = Vector3.new(4, 6, 1)
+        Box.Color3 = player.Team == LocalPlayer.Team and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+        Box.Transparency = 0.7
+        Box.AlwaysOnTop = true
+        Box.ZIndex = 1
+        Box.Parent = humanoidRootPart
+        
+        ESP.Box = Box
+    end
 end
 
 function CreateSkeletonESP(character, player)
@@ -675,69 +557,11 @@ function CreateSkeletonESP(character, player)
     if humanoid then
         local root = character:FindFirstChild("HumanoidRootPart")
         local head = character:FindFirstChild("Head")
-        local leftArm = character:FindFirstChild("LeftUpperArm") or character:FindFirstChild("Left Arm")
-        local rightArm = character:FindFirstChild("RightUpperArm") or character:FindFirstChild("Right Arm")
-        local leftLeg = character:FindFirstChild("LeftUpperLeg") or character:FindFirstChild("Left Leg")
-        local rightLeg = character:FindFirstChild("RightUpperLeg") or character:FindFirstChild("Right Leg")
         
         if root and head then
             CreateBoneLine(root, head)
-            
-            if leftArm then CreateBoneLine(root, leftArm) end
-            if rightArm then CreateBoneLine(root, rightArm) end
-            if leftLeg then CreateBoneLine(root, leftLeg) end
-            if rightLeg then CreateBoneLine(root, rightLeg) end
         end
     end
-end
-
-function CreateNameESP(character, player)
-    local ESP = ESPObjects[player]
-    if not ESP then return end
-    
-    local Billboard = Instance.new("BillboardGui")
-    Billboard.Name = "ESPName"
-    Billboard.Adornee = character:FindFirstChild("Head") or character:WaitForChild("Head", 5)
-    Billboard.Size = UDim2.new(0, 200, 0, 50)
-    Billboard.StudsOffset = Vector3.new(0, 3, 0)
-    Billboard.AlwaysOnTop = true
-    Billboard.Parent = character
-    
-    local NameLabel = Instance.new("TextLabel")
-    NameLabel.Size = UDim2.new(1, 0, 1, 0)
-    NameLabel.BackgroundTransparency = 1
-    NameLabel.Text = player.Name
-    NameLabel.TextColor3 = player.Team == LocalPlayer.Team and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    NameLabel.TextStrokeTransparency = 0
-    NameLabel.TextSize = 14
-    NameLabel.Font = Enum.Font.GothamBold
-    NameLabel.Parent = Billboard
-    
-    ESP.Name = Billboard
-end
-
-function CreateDistanceESP(character, player)
-    local ESP = ESPObjects[player]
-    if not ESP then return end
-    
-    local Billboard = Instance.new("BillboardGui")
-    Billboard.Name = "ESPDistance"
-    Billboard.Adornee = character:FindFirstChild("Head") or character:WaitForChild("Head", 5)
-    Billboard.Size = UDim2.new(0, 200, 0, 50)
-    Billboard.StudsOffset = Vector3.new(0, 2, 0)
-    Billboard.AlwaysOnTop = true
-    Billboard.Parent = character
-    
-    local DistanceLabel = Instance.new("TextLabel")
-    DistanceLabel.Size = UDim2.new(1, 0, 1, 0)
-    DistanceLabel.BackgroundTransparency = 1
-    DistanceLabel.TextColor3 = player.Team == LocalPlayer.Team and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    DistanceLabel.TextStrokeTransparency = 0
-    DistanceLabel.TextSize = 12
-    DistanceLabel.Font = Enum.Font.Gotham
-    DistanceLabel.Parent = Billboard
-    
-    ESP.Distance = Billboard
 end
 
 function ClearESP()
@@ -748,8 +572,6 @@ function ClearESP()
     
     for player, esp in pairs(ESPObjects) do
         if esp.Box then esp.Box:Destroy() end
-        if esp.Name then esp.Name:Destroy() end
-        if esp.Distance then esp.Distance:Destroy() end
         for _, skeletonPart in pairs(esp.Skeleton) do
             if skeletonPart.Beam then skeletonPart.Beam:Destroy() end
             if skeletonPart.Att1 then skeletonPart.Att1:Destroy() end
@@ -762,32 +584,16 @@ end
 -- Game Functions
 local function IsTeamMate(player)
     if not Cheats.SilentAim.TeamCheck then return false end
-    
-    local localTeam = LocalPlayer.Team
-    local playerTeam = player.Team
-    
-    return localTeam and playerTeam and localTeam == playerTeam
-end
-
-local function IsVisible(target, origin)
-    if not Cheats.SilentAim.WallCheck then return true end
-    
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Blacklist
-    params.FilterDescendantsInstances = {LocalPlayer.Character, target.Parent}
-    
-    local direction = (target.Position - origin).Unit
-    local result = Workspace:Raycast(origin, direction * 1000, params)
-    
-    return result == nil or result.Instance:IsDescendantOf(target.Parent)
+    return LocalPlayer.Team and player.Team and LocalPlayer.Team == player.Team
 end
 
 local function GetClosestPlayer()
+    if not Cheats.SilentAim.Enabled then return nil end
+    
     local closestPlayer = nil
     local closestDistance = Cheats.SilentAim.FOV
     
     local camera = Workspace.CurrentCamera
-    local mousePos = Vector2.new(Mouse.X, Mouse.Y)
     local cameraPos = camera.CFrame.Position
     
     for _, player in pairs(Players:GetPlayers()) do
@@ -796,15 +602,11 @@ local function GetClosestPlayer()
             local head = player.Character:FindFirstChild("Head")
             
             if humanoid and humanoid.Health > 0 and head then
-                local screenPoint, onScreen = camera:WorldToViewportPoint(head.Position)
+                local distance = (head.Position - cameraPos).Magnitude
                 
-                if onScreen then
-                    local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePos).Magnitude
-                    
-                    if distance < closestDistance and IsVisible(head, cameraPos) then
-                        closestDistance = distance
-                        closestPlayer = player
-                    end
+                if distance < closestDistance then
+                    closestDistance = distance
+                    closestPlayer = player
                 end
             end
         end
@@ -813,7 +615,7 @@ local function GetClosestPlayer()
     return closestPlayer
 end
 
--- FIXED Silent Aim with Camera Control
+-- Silent Aim Function
 local function SilentAim()
     if not Cheats.SilentAim.Enabled then return end
     
@@ -823,29 +625,12 @@ local function SilentAim()
     local targetHead = targetPlayer.Character:FindFirstChild("Head")
     if not targetHead then return end
     
-    -- Aim camera at target
+    -- Simple aim at target
     local camera = Workspace.CurrentCamera
-    local currentCFrame = camera.CFrame
-    local targetPosition = targetHead.Position
-    
-    -- Smooth camera movement
-    local newCFrame = CFrame.lookAt(currentCFrame.Position, targetPosition)
-    camera.CFrame = newCFrame:Lerp(newCFrame, 0.7)
-    
-    -- Auto Shoot
-    if Cheats.SilentAim.AutoShoot then
-        -- Simulate mouse click for shooting
-        local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
-        if tool then
-            local remote = tool:FindFirstChildOfClass("RemoteEvent") or tool:FindFirstChildOfClass("RemoteFunction")
-            if remote then
-                remote:FireServer("MouseClick", targetHead.Position)
-            end
-        end
-    end
+    camera.CFrame = CFrame.lookAt(camera.CFrame.Position, targetHead.Position)
 end
 
--- FIXED Speed Hack
+-- Speed Hack
 local function ApplySpeed()
     if not Cheats.Movement.Speed then return end
     
@@ -858,7 +643,7 @@ local function ApplySpeed()
     end
 end
 
--- FIXED Bunny Hop
+-- Bunny Hop
 local BunnyHopConnection
 local function ToggleBunnyHop()
     if BunnyHopConnection then
@@ -871,55 +656,33 @@ local function ToggleBunnyHop()
             local character = LocalPlayer.Character
             if character then
                 local humanoid = character:FindFirstChildOfClass("Humanoid")
-                local rootPart = character:FindFirstChild("HumanoidRootPart")
-                
-                if humanoid and rootPart and humanoid:GetState() == Enum.HumanoidStateType.Running then
-                    -- Check if on ground
-                    local ray = Ray.new(rootPart.Position, Vector3.new(0, -3, 0))
-                    local part = Workspace:FindPartOnRay(ray, character)
-                    
-                    if part then
-                        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                    end
+                if humanoid and humanoid:GetState() == Enum.HumanoidStateType.Running then
+                    humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                 end
             end
         end)
     end
 end
 
--- Anti-Aim
-local function ApplyAntiAim()
-    if not Cheats.AntiAim.Enabled then return end
+-- Initialize everything
+local function Initialize()
+    print("Initializing Neverlose Cheat...")
     
-    local character = LocalPlayer.Character
-    if character then
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.AutoRotate = false
-            local root = character:FindFirstChild("HumanoidRootPart")
-            if root then
-                if Cheats.AntiAim.Type == "Jitter" then
-                    root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(math.sin(tick() * 10) * 45), 0)
-                end
-            end
-        end
-    end
+    -- Create GUI
+    CreateGUI()
+    
+    -- Setup Insert bind
+    SetupInsertBind()
+    
+    -- Start main loop
+    RunService.Heartbeat:Connect(function()
+        ApplySpeed()
+        SilentAim()
+    end)
+    
+    print("Neverlose Cheat Loaded Successfully!")
+    print("Press INSERT to open/close menu")
 end
 
--- Update ESP Distances
-local function UpdateESPDistances()
-    if not Cheats.ESP.Enabled then return end
-    
-    local localCharacter = LocalPlayer.Character
-    local localRoot = localCharacter and localCharacter:FindFirstChild("HumanoidRootPart")
-    
-    if not localRoot then return end
-    
-    for player, esp in pairs(ESPObjects) do
-        if esp.Distance and player.Character then
-            local character = player.Character
-            local root = character:FindFirstChild("HumanoidRootPart")
-            
-            if root then
-                local distance = (localRoot.Position - root.Position).Magnitude
-                local distanceText = tostring(math.floor(distance
+-- Start the cheat
+Initialize()
