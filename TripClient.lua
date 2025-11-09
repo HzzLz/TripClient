@@ -1,5 +1,5 @@
 -- Neverlose.lua Style Cheat Menu for Roblox
--- Fixed Version with Working Menu
+-- Fixed Silent Aim (No Camera Movement)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -16,30 +16,21 @@ local Cheats = {
         FOV = 50,
         TeamCheck = true,
         WallCheck = true,
-        AutoShoot = true,
-        HitPart = "Head"
+        AutoShoot = false,
+        HitPart = "Head",
+        UseMouseHit = true -- Будет использовать позицию мыши для обмана
     },
     Movement = {
         Speed = false,
         SpeedValue = 25,
         BunnyHop = false
     },
-    AntiAim = {
-        Enabled = false,
-        Type = "Jitter"
-    },
     ESP = {
         Enabled = false,
         Box = true,
-        Skeleton = true,
-        Names = true,
-        Distance = true
+        Skeleton = true
     }
 }
-
--- ESP Variables
-local ESPObjects = {}
-local Connections = {}
 
 -- Menu Variables
 local ScreenGui = nil
@@ -48,7 +39,6 @@ local MenuVisible = false
 
 -- Create GUI Function
 local function CreateGUI()
-    -- Check if GUI already exists
     if ScreenGui then
         ScreenGui:Destroy()
     end
@@ -329,7 +319,7 @@ local function CreateGUI()
 
     -- Create actual tabs
     local RageTab = CreateTab("Rage")
-    local AimSection = RageTab:CreateSection("Aimbot")
+    local AimSection = RageTab:CreateSection("Silent Aim")
 
     local SilentAimToggle = AimSection:CreateToggle("Silent Aim", false, function(state)
         Cheats.SilentAim.Enabled = state
@@ -344,7 +334,7 @@ local function CreateGUI()
         Cheats.SilentAim.WallCheck = state
     end)
 
-    local AutoShootToggle = AimSection:CreateToggle("Auto Shoot", true, function(state)
+    local AutoShootToggle = AimSection:CreateToggle("Auto Shoot", false, function(state)
         Cheats.SilentAim.AutoShoot = state
     end)
 
@@ -354,7 +344,7 @@ local function CreateGUI()
 
     -- Movement Tab
     local MovementTab = CreateTab("Movement")
-    local SpeedSection = MovementTab:CreateSection("Speed")
+    local SpeedSection = MovementTab:CreateSection("Movement")
 
     local SpeedToggle = SpeedSection:CreateToggle("Speed Hack", false, function(state)
         Cheats.Movement.Speed = state
@@ -368,27 +358,6 @@ local function CreateGUI()
     local BunnyToggle = SpeedSection:CreateToggle("Bunny Hop", false, function(state)
         Cheats.Movement.BunnyHop = state
         ToggleBunnyHop()
-    end)
-
-    -- Visuals Tab
-    local VisualsTab = CreateTab("Visuals")
-    local ESPSection = VisualsTab:CreateSection("ESP")
-
-    local ESPToggle = ESPSection:CreateToggle("ESP", false, function(state)
-        Cheats.ESP.Enabled = state
-        if state then
-            CreateESP()
-        else
-            ClearESP()
-        end
-    end)
-
-    local BoxToggle = ESPSection:CreateToggle("Box ESP", true, function(state)
-        Cheats.ESP.Box = state
-    end)
-
-    local SkeletonToggle = ESPSection:CreateToggle("Skeleton", true, function(state)
-        Cheats.ESP.Skeleton = state
     end)
 
     -- Make window draggable
@@ -452,148 +421,31 @@ local function SetupInsertBind()
     end)
 end
 
--- ESP Functions
-function CreateESP()
-    ClearESP()
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            AddESP(player)
-        end
-    end
-    
-    local PlayerAdded = Players.PlayerAdded:Connect(function(player)
-        AddESP(player)
-    end)
-    
-    table.insert(Connections, PlayerAdded)
-end
-
-function AddESP(player)
-    local ESP = {
-        Box = nil,
-        Skeleton = {}
-    }
-    
-    ESPObjects[player] = ESP
-    
-    local CharacterAdded
-    CharacterAdded = player.CharacterAdded:Connect(function(character)
-        wait(1)
-        
-        if Cheats.ESP.Box then
-            CreateBoxESP(character, player)
-        end
-        
-        if Cheats.ESP.Skeleton then
-            CreateSkeletonESP(character, player)
-        end
-    end)
-    
-    table.insert(Connections, CharacterAdded)
-    
-    if player.Character then
-        local character = player.Character
-        
-        if Cheats.ESP.Box then
-            CreateBoxESP(character, player)
-        end
-        
-        if Cheats.ESP.Skeleton then
-            CreateSkeletonESP(character, player)
-        end
-    end
-end
-
-function CreateBoxESP(character, player)
-    local ESP = ESPObjects[player]
-    if not ESP then return end
-    
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then
-        humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
-    end
-    
-    if humanoidRootPart then
-        local Box = Instance.new("BoxHandleAdornment")
-        Box.Name = "ESPBox"
-        Box.Adornee = humanoidRootPart
-        Box.Size = Vector3.new(4, 6, 1)
-        Box.Color3 = player.Team == LocalPlayer.Team and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-        Box.Transparency = 0.7
-        Box.AlwaysOnTop = true
-        Box.ZIndex = 1
-        Box.Parent = humanoidRootPart
-        
-        ESP.Box = Box
-    end
-end
-
-function CreateSkeletonESP(character, player)
-    local ESP = ESPObjects[player]
-    if not ESP then return end
-    
-    local function CreateBoneLine(part1, part2)
-        if not part1 or not part2 then return end
-        
-        local Attachment1 = Instance.new("Attachment")
-        Attachment1.Parent = part1
-        
-        local Attachment2 = Instance.new("Attachment")
-        Attachment2.Parent = part2
-        
-        local Beam = Instance.new("Beam")
-        Beam.Attachment0 = Attachment1
-        Beam.Attachment1 = Attachment2
-        Beam.Color = ColorSequence.new(player.Team == LocalPlayer.Team and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0))
-        Beam.Width0 = 0.1
-        Beam.Width1 = 0.1
-        Beam.Parent = character
-        
-        table.insert(ESP.Skeleton, {Beam = Beam, Att1 = Attachment1, Att2 = Attachment2})
-    end
-    
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        local root = character:FindFirstChild("HumanoidRootPart")
-        local head = character:FindFirstChild("Head")
-        
-        if root and head then
-            CreateBoneLine(root, head)
-        end
-    end
-end
-
-function ClearESP()
-    for _, connection in pairs(Connections) do
-        connection:Disconnect()
-    end
-    Connections = {}
-    
-    for player, esp in pairs(ESPObjects) do
-        if esp.Box then esp.Box:Destroy() end
-        for _, skeletonPart in pairs(esp.Skeleton) do
-            if skeletonPart.Beam then skeletonPart.Beam:Destroy() end
-            if skeletonPart.Att1 then skeletonPart.Att1:Destroy() end
-            if skeletonPart.Att2 then skeletonPart.Att2:Destroy() end
-        end
-    end
-    ESPObjects = {}
-end
-
 -- Game Functions
 local function IsTeamMate(player)
     if not Cheats.SilentAim.TeamCheck then return false end
     return LocalPlayer.Team and player.Team and LocalPlayer.Team == player.Team
 end
 
-local function GetClosestPlayer()
-    if not Cheats.SilentAim.Enabled then return nil end
+local function IsVisible(target, origin)
+    if not Cheats.SilentAim.WallCheck then return true end
     
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    params.FilterDescendantsInstances = {LocalPlayer.Character, target.Parent}
+    
+    local direction = (target.Position - origin).Unit
+    local result = Workspace:Raycast(origin, direction * 1000, params)
+    
+    return result == nil or result.Instance:IsDescendantOf(target.Parent)
+end
+
+local function GetClosestPlayer()
     local closestPlayer = nil
     local closestDistance = Cheats.SilentAim.FOV
     
     local camera = Workspace.CurrentCamera
+    local mousePos = Vector2.new(Mouse.X, Mouse.Y)
     local cameraPos = camera.CFrame.Position
     
     for _, player in pairs(Players:GetPlayers()) do
@@ -602,11 +454,15 @@ local function GetClosestPlayer()
             local head = player.Character:FindFirstChild("Head")
             
             if humanoid and humanoid.Health > 0 and head then
-                local distance = (head.Position - cameraPos).Magnitude
+                local screenPoint, onScreen = camera:WorldToViewportPoint(head.Position)
                 
-                if distance < closestDistance then
-                    closestDistance = distance
-                    closestPlayer = player
+                if onScreen then
+                    local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePos).Magnitude
+                    
+                    if distance < closestDistance and IsVisible(head, cameraPos) then
+                        closestDistance = distance
+                        closestPlayer = player
+                    end
                 end
             end
         end
@@ -615,19 +471,83 @@ local function GetClosestPlayer()
     return closestPlayer
 end
 
--- Silent Aim Function
-local function SilentAim()
-    if not Cheats.SilentAim.Enabled then return end
+-- REAL Silent Aim (без движения камеры)
+local function GetClosestTarget()
+    if not Cheats.SilentAim.Enabled then return nil end
     
     local targetPlayer = GetClosestPlayer()
-    if not targetPlayer or not targetPlayer.Character then return end
+    if not targetPlayer or not targetPlayer.Character then return nil end
     
-    local targetHead = targetPlayer.Character:FindFirstChild("Head")
-    if not targetHead then return end
+    local targetPart = targetPlayer.Character:FindFirstChild(Cheats.SilentAim.HitPart)
+    if not targetPart then return nil end
     
-    -- Simple aim at target
-    local camera = Workspace.CurrentCamera
-    camera.CFrame = CFrame.lookAt(camera.CFrame.Position, targetHead.Position)
+    return targetPart
+end
+
+-- Hook для изменения позиции выстрела
+local OriginalMouseHit
+local function SetupSilentAimHook()
+    -- Сохраняем оригинальную функцию мыши
+    if not OriginalMouseHit then
+        OriginalMouseHit = Mouse.Hit
+    end
+    
+    -- Перехватываем Mouse.Hit
+    local __index
+    __index = hookmetamethod(game, "__index", function(self, key)
+        if self == Mouse and key == "Hit" and Cheats.SilentAim.Enabled then
+            local target = GetClosestTarget()
+            if target then
+                -- Возвращаем позицию цели вместо реальной позиции мыши
+                return CFrame.new(target.Position)
+            end
+        end
+        return __index(self, key)
+    end)
+end
+
+-- Альтернативный метод через перехват RemoteEvents
+local function HookRemoteEvents()
+    local function HookRemote(remote)
+        if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+            local oldFireServer = remote.FireServer
+            remote.FireServer = function(self, ...)
+                local args = {...}
+                
+                -- Проверяем, связан ли Remote с оружием
+                if Cheats.SilentAim.Enabled and string.find(tostring(self.Parent), "Tool") then
+                    local target = GetClosestTarget()
+                    if target then
+                        -- Заменяем позицию выстрела на позицию цели
+                        for i, arg in ipairs(args) do
+                            if typeof(arg) == "Vector3" then
+                                args[i] = target.Position
+                            elseif typeof(arg) == "CFrame" then
+                                args[i] = CFrame.new(target.Position)
+                            end
+                        end
+                    end
+                end
+                
+                return oldFireServer(self, unpack(args))
+            end
+        end
+    end
+    
+    -- Хукуем существующие RemoteEvents
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) and string.find(tostring(obj.Parent), "Tool") then
+            HookRemote(obj)
+        end
+    end
+    
+    -- Хукуем новые RemoteEvents
+    Workspace.DescendantAdded:Connect(function(obj)
+        if (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) and string.find(tostring(obj.Parent), "Tool") then
+            wait(0.1)
+            HookRemote(obj)
+        end
+    end)
 end
 
 -- Speed Hack
@@ -664,6 +584,35 @@ local function ToggleBunnyHop()
     end
 end
 
+-- Auto Shoot
+local AutoShootConnection
+local function ToggleAutoShoot()
+    if AutoShootConnection then
+        AutoShootConnection:Disconnect()
+        AutoShootConnection = nil
+    end
+    
+    if Cheats.SilentAim.AutoShoot then
+        AutoShootConnection = RunService.Heartbeat:Connect(function()
+            if Cheats.SilentAim.Enabled then
+                local target = GetClosestTarget()
+                if target then
+                    -- Симулируем нажатие мыши
+                    local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                    if tool then
+                        local remote = tool:FindFirstChildOfClass("RemoteEvent") or tool:FindFirstChildOfClass("RemoteFunction")
+                        if remote then
+                            remote:FireServer("MouseButton1", "Down", target.Position)
+                            task.wait(0.1)
+                            remote:FireServer("MouseButton1", "Up", target.Position)
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end
+
 -- Initialize everything
 local function Initialize()
     print("Initializing Neverlose Cheat...")
@@ -674,14 +623,22 @@ local function Initialize()
     -- Setup Insert bind
     SetupInsertBind()
     
+    -- Setup Silent Aim hooks
+    SetupSilentAimHook()
+    HookRemoteEvents()
+    
     -- Start main loop
     RunService.Heartbeat:Connect(function()
         ApplySpeed()
-        SilentAim()
     end)
+    
+    -- Auto update AutoShoot
+    Cheats.SilentAim.AutoShoot = false
+    ToggleAutoShoot()
     
     print("Neverlose Cheat Loaded Successfully!")
     print("Press INSERT to open/close menu")
+    print("Silent Aim: Camera won't move, but bullets will hit targets")
 end
 
 -- Start the cheat
