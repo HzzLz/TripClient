@@ -1,4 +1,4 @@
--- Gothbreach Click GUI Cheat v3.0
+-- Gothbreach Click GUI Cheat v4.0
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -23,23 +23,24 @@ local CheatSettings = {
         Skeletons = true
     },
     
-    Movement = {
-        Spinbot = {
-            Enabled = false,
-            Speed = 50,
-            Pitch = -89,
-            AntiAim = true
-        }
+    Visuals = {
+        ThirdPerson = false,
+        ThirdPersonDistance = 10
+    },
+    
+    AntiAim = {
+        Enabled = false,
+        Pitch = -89
     }
 }
 
 -- Хранилище
 local ESPObjects = {}
 local FOVCircle
-local spinbotConnection
 local aimbotConnection
 local lastTarget = nil
 local ClickGUIVisible = false
+local originalCameraType = nil
 
 -- Создание Click GUI
 local ScreenGui = Instance.new("ScreenGui")
@@ -107,7 +108,6 @@ function toggleClickGUI()
     MainFrame.Visible = ClickGUIVisible
     
     if ClickGUIVisible then
-        -- Анимация появления
         MainFrame.Position = UDim2.new(0.5, -150, 0.3, -100)
         MainFrame.Size = UDim2.new(0, 300, 0, 0)
         
@@ -118,7 +118,6 @@ function toggleClickGUI()
         })
         tween:Play()
     else
-        -- Анимация исчезновения
         local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In)
         local tween = TweenService:Create(MainFrame, tweenInfo, {
             Size = UDim2.new(0, 300, 0, 0),
@@ -332,7 +331,38 @@ UIListLayout.Parent = AimbotTab
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 5)
 
+-- Visuals Tab
+local VisualsTab = Instance.new("ScrollingFrame")
+VisualsTab.Name = "VisualsTab"
+VisualsTab.Parent = TabsContainer
+VisualsTab.BackgroundTransparency = 1
+VisualsTab.Size = UDim2.new(1, 0, 1, 0)
+VisualsTab.CanvasSize = UDim2.new(0, 0, 0, 0)
+VisualsTab.ScrollBarThickness = 3
+VisualsTab.Visible = false
+
+local VisualsLayout = Instance.new("UIListLayout")
+VisualsLayout.Parent = VisualsTab
+VisualsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+VisualsLayout.Padding = UDim.new(0, 5)
+
+-- Movement Tab
+local MovementTab = Instance.new("ScrollingFrame")
+MovementTab.Name = "MovementTab"
+MovementTab.Parent = TabsContainer
+MovementTab.BackgroundTransparency = 1
+MovementTab.Size = UDim2.new(1, 0, 1, 0)
+MovementTab.CanvasSize = UDim2.new(0, 0, 0, 0)
+MovementTab.ScrollBarThickness = 3
+MovementTab.Visible = false
+
+local MovementLayout = Instance.new("UIListLayout")
+MovementLayout.Parent = MovementTab
+MovementLayout.SortOrder = Enum.SortOrder.LayoutOrder
+MovementLayout.Padding = UDim.new(0, 5)
+
 -- Добавление элементов в GUI
+-- Aimbot Tab
 createToggle("Enable Aimbot", "Включить аимбот", function(state)
     CheatSettings.Aimbot.Enabled = state
     startAimbot()
@@ -357,61 +387,31 @@ createToggle("Team Check", "Проверка команды", function(state)
     CheatSettings.ESP.TeamCheck = state
 end, AimbotTab)
 
--- ESP Tab
-local ESPTab = Instance.new("ScrollingFrame")
-ESPTab.Name = "ESPTab"
-ESPTab.Parent = TabsContainer
-ESPTab.BackgroundTransparency = 1
-ESPTab.Size = UDim2.new(1, 0, 1, 0)
-ESPTab.CanvasSize = UDim2.new(0, 0, 0, 0)
-ESPTab.ScrollBarThickness = 3
-ESPTab.Visible = false
-
-local ESPLayout = Instance.new("UIListLayout")
-ESPLayout.Parent = ESPTab
-ESPLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ESPLayout.Padding = UDim.new(0, 5)
-
+-- Visuals Tab
 createToggle("Enable ESP", "Включить ESP", function(state)
     CheatSettings.ESP.Enabled = state
     startESP()
-end, ESPTab)
+end, VisualsTab)
 
 createToggle("Skeletons", "Показать скелеты", function(state)
     CheatSettings.ESP.Skeletons = state
     startESP()
-end, ESPTab)
+end, VisualsTab)
+
+createToggle("Third Person", "Вид от 3-го лица", function(state)
+    CheatSettings.Visuals.ThirdPerson = state
+    updateThirdPerson()
+end, VisualsTab)
+
+createSlider("TP Distance", 5, 20, function(value)
+    CheatSettings.Visuals.ThirdPersonDistance = value
+    updateThirdPerson()
+end, VisualsTab)
 
 -- Movement Tab
-local MovementTab = Instance.new("ScrollingFrame")
-MovementTab.Name = "MovementTab"
-MovementTab.Parent = TabsContainer
-MovementTab.BackgroundTransparency = 1
-MovementTab.Size = UDim2.new(1, 0, 1, 0)
-MovementTab.CanvasSize = UDim2.new(0, 0, 0, 0)
-MovementTab.ScrollBarThickness = 3
-MovementTab.Visible = false
-
-local MovementLayout = Instance.new("UIListLayout")
-MovementLayout.Parent = MovementTab
-MovementLayout.SortOrder = Enum.SortOrder.LayoutOrder
-MovementLayout.Padding = UDim.new(0, 5)
-
-createToggle("Enable Spinbot", "Включить крутилку", function(state)
-    CheatSettings.Movement.Spinbot.Enabled = state
-    if state then
-        startSpinbot()
-    else
-        stopSpinbot()
-    end
-end, MovementTab)
-
-createSlider("Spin Speed", 10, 200, function(value)
-    CheatSettings.Movement.Spinbot.Speed = value
-end, MovementTab)
-
 createToggle("Anti-Aim", "Защита от хедшотов", function(state)
-    CheatSettings.Movement.Spinbot.AntiAim = state
+    CheatSettings.AntiAim.Enabled = state
+    updateAntiAim()
 end, MovementTab)
 
 -- Создание кнопок переключения вкладок
@@ -437,11 +437,10 @@ local function createTabButton(name, targetTab, position)
     
     button.MouseButton1Click:Connect(function()
         AimbotTab.Visible = false
-        ESPTab.Visible = false
+        VisualsTab.Visible = false
         MovementTab.Visible = false
         targetTab.Visible = true
         
-        -- Подсветка активной вкладки
         for _, btn in pairs(TabButtons:GetChildren()) do
             if btn:IsA("TextButton") then
                 btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
@@ -454,7 +453,7 @@ local function createTabButton(name, targetTab, position)
 end
 
 createTabButton("Aimbot", AimbotTab, UDim2.new(0, 0, 0, 0))
-createTabButton("Visuals", ESPTab, UDim2.new(0.33, 0, 0, 0))
+createTabButton("Visuals", VisualsTab, UDim2.new(0.33, 0, 0, 0))
 createTabButton("Movement", MovementTab, UDim2.new(0.66, 0, 0, 0))
 
 -- Обработчики GUI
@@ -470,22 +469,247 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
+-- Функции чита
+-- FOV Circle
+function createFOVCircle()
+    if FOVCircle then FOVCircle:Remove() end
+    
+    FOVCircle = Drawing.new("Circle")
+    FOVCircle.Visible = false
+    FOVCircle.Thickness = 1
+    FOVCircle.Color = Color3.fromRGB(255, 0, 0)
+    FOVCircle.Filled = false
+    FOVCircle.Radius = CheatSettings.Aimbot.FOV
+    FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+end
+
+function updateFOVCircle()
+    if not FOVCircle then createFOVCircle() end
+    
+    FOVCircle.Visible = CheatSettings.Aimbot.ShowFOV and CheatSettings.Aimbot.Enabled
+    FOVCircle.Radius = CheatSettings.Aimbot.FOV
+    FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    FOVCircle.Color = CheatSettings.Aimbot.Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+end
+
+-- Third Person
+function updateThirdPerson()
+    if CheatSettings.Visuals.ThirdPerson then
+        originalCameraType = Camera.CameraType
+        Camera.CameraType = Enum.CameraType.Scriptable
+        
+        RunService:BindToRenderStep("ThirdPerson", Enum.RenderPriority.Camera.Value, function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local rootPart = LocalPlayer.Character.HumanoidRootPart
+                local lookVector = rootPart.CFrame.LookVector
+                
+                Camera.CFrame = CFrame.new(
+                    rootPart.Position - lookVector * CheatSettings.Visuals.ThirdPersonDistance,
+                    rootPart.Position
+                )
+            end
+        end)
+    else
+        RunService:UnbindFromRenderStep("ThirdPerson")
+        if originalCameraType then
+            Camera.CameraType = originalCameraType
+        end
+    end
+end
+
+-- Anti-Aim
+function updateAntiAim()
+    if CheatSettings.AntiAim.Enabled then
+        RunService:BindToRenderStep("AntiAim", Enum.RenderPriority.Character.Value, function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") then
+                local head = LocalPlayer.Character.Head
+                local rootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                
+                if rootPart then
+                    -- Фиксируем голову близко к телу (защита от хедшотов)
+                    head.CFrame = rootPart.CFrame * CFrame.new(0, 1.5, 0)
+                end
+            end
+        end)
+    else
+        RunService:UnbindFromRenderStep("AntiAim")
+    end
+end
+
+-- Аимбот (упрощенная версия)
+function isEnemy(player)
+    if not CheatSettings.Aimbot.TeamCheck then return true end
+    return player.Team ~= LocalPlayer.Team
+end
+
+function isAlive(player)
+    local character = player.Character
+    if not character then return false end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    return humanoid and humanoid.Health > 0
+end
+
+function startAimbot()
+    if aimbotConnection then aimbotConnection:Disconnect() end
+    
+    aimbotConnection = RunService.RenderStepped:Connect(function()
+        if not CheatSettings.Aimbot.Enabled or not isAlive(LocalPlayer) then 
+            lastTarget = nil
+            return 
+        end
+        
+        if not lastTarget or tick() % 0.1 > 0.02 then
+            local closestTarget = nil
+            local closestDistance = CheatSettings.Aimbot.FOV
+            local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+            
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and isEnemy(player) and isAlive(player) then
+                    local character = player.Character
+                    local aimPart = character and character:FindFirstChild(CheatSettings.Aimbot.AimPart)
+                    
+                    if aimPart then
+                        local screenPos, onScreen = Camera:WorldToViewportPoint(aimPart.Position)
+                        
+                        if onScreen then
+                            local pos = Vector2.new(screenPos.X, screenPos.Y)
+                            local dist = (center - pos).Magnitude
+                            
+                            if dist < closestDistance then
+                                closestDistance = dist
+                                closestTarget = aimPart
+                            end
+                        end
+                    end
+                end
+            end
+            
+            lastTarget = closestTarget
+        end
+        
+        if lastTarget and lastTarget.Parent then
+            local targetChar = lastTarget.Parent
+            local player = Players:GetPlayerFromCharacter(targetChar)
+            
+            if player and isAlive(player) then
+                local currentCF = Camera.CFrame
+                local targetCF = CFrame.lookAt(currentCF.Position, lastTarget.Position)
+                Camera.CFrame = currentCF:Lerp(targetCF, CheatSettings.Aimbot.Smoothness)
+            else
+                lastTarget = nil
+            end
+        end
+    end)
+end
+
+-- ESP (упрощенная версия)
+function createSkeleton(player)
+    if ESPObjects[player] then return end
+    
+    local character = player.Character
+    if not character then return end
+    
+    local lines = {}
+    local connections = {}
+    
+    local boneConnections = {
+        {"Head", "UpperTorso"},
+        {"UpperTorso", "LowerTorso"},
+        {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"},
+        {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"},
+        {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"},
+        {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}
+    }
+    
+    for _, bones in pairs(boneConnections) do
+        local line = Drawing.new("Line")
+        line.Visible = false
+        line.Thickness = 1
+        line.Color = Color3.fromRGB(255, 0, 0)
+        lines[bones[1].."_"..bones[2]] = line
+    end
+    
+    local updateConnection
+    local function updateSkeleton()
+        if not character or not character.Parent or not isAlive(player) then
+            if updateConnection then updateConnection:Disconnect() end
+            for _, line in pairs(lines) do
+                line:Remove()
+            end
+            ESPObjects[player] = nil
+            return
+        end
+        
+        for bonePair, line in pairs(lines) do
+            local bones = bonePair:split("_")
+            local fromPart = character:FindFirstChild(bones[1])
+            local toPart = character:FindFirstChild(bones[2])
+            
+            if fromPart and toPart then
+                local fromPos, fromVisible = Camera:WorldToViewportPoint(fromPart.Position)
+                local toPos, toVisible = Camera:WorldToViewportPoint(toPart.Position)
+                
+                if fromVisible and toVisible then
+                    line.From = Vector2.new(fromPos.X, fromPos.Y)
+                    line.To = Vector2.new(toPos.X, toPos.Y)
+                    line.Visible = true
+                else
+                    line.Visible = false
+                end
+            else
+                line.Visible = false
+            end
+        end
+    end
+    
+    updateConnection = RunService.RenderStepped:Connect(updateSkeleton)
+    ESPObjects[player] = {
+        connection = updateConnection,
+        lines = lines
+    }
+end
+
+function clearESP(player)
+    local data = ESPObjects[player]
+    if not data then return end
+    
+    if data.connection then data.connection:Disconnect() end
+    for _, line in pairs(data.lines) do
+        line:Remove()
+    end
+    ESPObjects[player] = nil
+end
+
+function startESP()
+    for player in pairs(ESPObjects) do
+        clearESP(player)
+    end
+    
+    if not CheatSettings.ESP.Enabled then return end
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and isEnemy(player) then
+            createSkeleton(player)
+        end
+    end
+end
+
 -- Автоматическое обновление размеров контента
 UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     AimbotTab.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
 end)
 
-ESPLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    ESPTab.CanvasSize = UDim2.new(0, 0, 0, ESPLayout.AbsoluteContentSize.Y)
+VisualsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    VisualsTab.CanvasSize = UDim2.new(0, 0, 0, VisualsLayout.AbsoluteContentSize.Y)
 end)
 
 MovementLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     MovementTab.CanvasSize = UDim2.new(0, 0, 0, MovementLayout.AbsoluteContentSize.Y)
 end)
 
--- Функции чита (остаются без изменений из предыдущей версии)
--- [Здесь должен быть код FOVCircle, аимбота, ESP и Spinbot из предыдущего скрипта]
--- Для экономии места не дублирую, используй код из v2.5
+-- Запуск
+createFOVCircle()
+startAimbot()
 
-print("🎯 Gothbreach Click GUI v3.0 LOADED!")
+print("🎯 Gothbreach Click GUI v4.0 LOADED!")
 print("RightShift - Open/Close GUI")
