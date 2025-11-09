@@ -1,653 +1,522 @@
--- Gothbreach RAGE Cheat v7.0 (Silent Aim + WallCheck)
+-- Neverlose.lua Style Cheat Menu for Roblox
+-- Created by AI Assistant
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
 
--- Настройки чита
-local CheatSettings = {
-    Aimbot = {
+-- Neverlose inspired UI Library
+local Neverlose = {}
+
+function Neverlose:CreateWindow(name)
+    local Neverlose = {}
+    
+    -- Main GUI
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "NeverloseUI"
+    ScreenGui.Parent = game.CoreGui
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    
+    -- Main Frame
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 600, 0, 450)
+    MainFrame.Position = UDim2.new(0.5, -300, 0.5, -225)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Parent = ScreenGui
+    
+    -- Header
+    local Header = Instance.new("Frame")
+    Header.Name = "Header"
+    Header.Size = UDim2.new(1, 0, 0, 40)
+    Header.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    Header.BorderSizePixel = 0
+    Header.Parent = MainFrame
+    
+    local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
+    Title.Size = UDim2.new(0, 200, 1, 0)
+    Title.Position = UDim2.new(0, 10, 0, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text = name
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 14
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = Header
+    
+    -- Close Button
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Name = "CloseButton"
+    CloseButton.Size = UDim2.new(0, 30, 0, 30)
+    CloseButton.Position = UDim2.new(1, -35, 0, 5)
+    CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    CloseButton.BorderSizePixel = 0
+    CloseButton.Text = "X"
+    CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseButton.Font = Enum.Font.GothamBold
+    CloseButton.TextSize = 14
+    CloseButton.Parent = Header
+    
+    CloseButton.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+    end)
+    
+    -- Tabs Container
+    local TabsContainer = Instance.new("Frame")
+    TabsContainer.Name = "TabsContainer"
+    TabsContainer.Size = UDim2.new(0, 150, 1, -40)
+    TabsContainer.Position = UDim2.new(0, 0, 0, 40)
+    TabsContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    TabsContainer.BorderSizePixel = 0
+    TabsContainer.Parent = MainFrame
+    
+    -- Content Container
+    local ContentContainer = Instance.new("Frame")
+    ContentContainer.Name = "ContentContainer"
+    ContentContainer.Size = UDim2.new(1, -150, 1, -40)
+    ContentContainer.Position = UDim2.new(0, 150, 0, 40)
+    ContentContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    ContentContainer.BorderSizePixel = 0
+    ContentContainer.Parent = MainFrame
+    
+    local Tabs = {}
+    local CurrentTab = nil
+    
+    function Neverlose:CreateTab(name)
+        local Tab = {}
+        
+        local TabButton = Instance.new("TextButton")
+        TabButton.Name = name .. "Tab"
+        TabButton.Size = UDim2.new(1, -10, 0, 40)
+        TabButton.Position = UDim2.new(0, 5, 0, 5 + (#Tabs * 45))
+        TabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        TabButton.BorderSizePixel = 0
+        TabButton.Text = name
+        TabButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+        TabButton.Font = Enum.Font.Gotham
+        TabButton.TextSize = 12
+        TabButton.Parent = TabsContainer
+        
+        local TabContent = Instance.new("ScrollingFrame")
+        TabContent.Name = name .. "Content"
+        TabContent.Size = UDim2.new(1, -20, 1, -20)
+        TabContent.Position = UDim2.new(0, 10, 0, 10)
+        TabContent.BackgroundTransparency = 1
+        TabContent.BorderSizePixel = 0
+        TabContent.ScrollBarThickness = 3
+        TabContent.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 70)
+        TabContent.Visible = false
+        TabContent.Parent = ContentContainer
+        
+        local UIListLayout = Instance.new("UIListLayout")
+        UIListLayout.Parent = TabContent
+        UIListLayout.Padding = UDim.new(0, 5)
+        
+        TabButton.MouseButton1Click:Connect(function()
+            if CurrentTab then
+                CurrentTab.Button.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+                CurrentTab.Content.Visible = false
+            end
+            
+            TabButton.BackgroundColor3 = Color3.fromRGB(60, 100, 180)
+            TabContent.Visible = true
+            CurrentTab = Tab
+        end)
+        
+        Tab.Button = TabButton
+        Tab.Content = TabContent
+        
+        table.insert(Tabs, Tab)
+        
+        if #Tabs == 1 then
+            TabButton.BackgroundColor3 = Color3.fromRGB(60, 100, 180)
+            TabContent.Visible = true
+            CurrentTab = Tab
+        end
+        
+        function Tab:CreateSection(name)
+            local Section = {}
+            
+            local SectionFrame = Instance.new("Frame")
+            SectionFrame.Name = name .. "Section"
+            SectionFrame.Size = UDim2.new(1, 0, 0, 30)
+            SectionFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+            SectionFrame.BorderSizePixel = 0
+            SectionFrame.Parent = TabContent
+            
+            local SectionLabel = Instance.new("TextLabel")
+            SectionLabel.Name = "SectionLabel"
+            SectionLabel.Size = UDim2.new(1, -10, 1, 0)
+            SectionLabel.Position = UDim2.new(0, 10, 0, 0)
+            SectionLabel.BackgroundTransparency = 1
+            SectionLabel.Text = name
+            SectionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            SectionLabel.Font = Enum.Font.GothamBold
+            SectionLabel.TextSize = 12
+            SectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+            SectionLabel.Parent = SectionFrame
+            
+            function Section:CreateToggle(name, default, callback)
+                local Toggle = {}
+                
+                local ToggleFrame = Instance.new("Frame")
+                ToggleFrame.Name = name .. "Toggle"
+                ToggleFrame.Size = UDim2.new(1, 0, 0, 25)
+                ToggleFrame.BackgroundTransparency = 1
+                ToggleFrame.Parent = TabContent
+                
+                local ToggleButton = Instance.new("TextButton")
+                ToggleButton.Name = "ToggleButton"
+                ToggleButton.Size = UDim2.new(0, 120, 1, 0)
+                ToggleButton.Position = UDim2.new(0, 10, 0, 0)
+                ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+                ToggleButton.BorderSizePixel = 0
+                ToggleButton.Text = name
+                ToggleButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+                ToggleButton.Font = Enum.Font.Gotham
+                ToggleButton.TextSize = 11
+                ToggleButton.Parent = ToggleFrame
+                
+                local ToggleIndicator = Instance.new("Frame")
+                ToggleIndicator.Name = "ToggleIndicator"
+                ToggleIndicator.Size = UDim2.new(0, 20, 0, 20)
+                ToggleIndicator.Position = UDim2.new(1, -30, 0.5, -10)
+                ToggleIndicator.BackgroundColor3 = default and Color3.fromRGB(60, 180, 80) or Color3.fromRGB(80, 80, 90)
+                ToggleIndicator.BorderSizePixel = 0
+                ToggleIndicator.Parent = ToggleFrame
+                
+                local State = default
+                
+                ToggleButton.MouseButton1Click:Connect(function()
+                    State = not State
+                    ToggleIndicator.BackgroundColor3 = State and Color3.fromRGB(60, 180, 80) or Color3.fromRGB(80, 80, 90)
+                    callback(State)
+                end)
+                
+                Toggle.State = State
+                Toggle.Update = function(self, value)
+                    State = value
+                    ToggleIndicator.BackgroundColor3 = State and Color3.fromRGB(60, 180, 80) or Color3.fromRGB(80, 80, 90)
+                    callback(State)
+                end
+                
+                return Toggle
+            end
+            
+            function Section:CreateSlider(name, min, max, default, callback)
+                local Slider = {}
+                
+                local SliderFrame = Instance.new("Frame")
+                SliderFrame.Name = name .. "Slider"
+                SliderFrame.Size = UDim2.new(1, 0, 0, 40)
+                SliderFrame.BackgroundTransparency = 1
+                SliderFrame.Parent = TabContent
+                
+                local SliderLabel = Instance.new("TextLabel")
+                SliderLabel.Name = "SliderLabel"
+                SliderLabel.Size = UDim2.new(1, -10, 0, 15)
+                SliderLabel.Position = UDim2.new(0, 10, 0, 0)
+                SliderLabel.BackgroundTransparency = 1
+                SliderLabel.Text = name .. ": " .. default
+                SliderLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+                SliderLabel.Font = Enum.Font.Gotham
+                SliderLabel.TextSize = 11
+                SliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+                SliderLabel.Parent = SliderFrame
+                
+                local SliderBar = Instance.new("Frame")
+                SliderBar.Name = "SliderBar"
+                SliderBar.Size = UDim2.new(1, -20, 0, 5)
+                SliderBar.Position = UDim2.new(0, 10, 1, -15)
+                SliderBar.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+                SliderBar.BorderSizePixel = 0
+                SliderBar.Parent = SliderFrame
+                
+                local SliderFill = Instance.new("Frame")
+                SliderFill.Name = "SliderFill"
+                SliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+                SliderFill.BackgroundColor3 = Color3.fromRGB(60, 100, 180)
+                SliderFill.BorderSizePixel = 0
+                SliderFill.Parent = SliderBar
+                
+                local SliderButton = Instance.new("TextButton")
+                SliderButton.Name = "SliderButton"
+                SliderButton.Size = UDim2.new(0, 15, 0, 15)
+                SliderButton.Position = UDim2.new((default - min) / (max - min), -7.5, 0.5, -7.5)
+                SliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                SliderButton.BorderSizePixel = 0
+                SliderButton.Text = ""
+                SliderButton.Parent = SliderBar
+                
+                local Value = default
+                local Dragging = false
+                
+                local function UpdateSlider(input)
+                    local relativeX = (input.Position.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X
+                    relativeX = math.clamp(relativeX, 0, 1)
+                    
+                    Value = math.floor(min + (max - min) * relativeX)
+                    SliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
+                    SliderButton.Position = UDim2.new(relativeX, -7.5, 0.5, -7.5)
+                    SliderLabel.Text = name .. ": " .. Value
+                    
+                    callback(Value)
+                end
+                
+                SliderButton.MouseButton1Down:Connect(function()
+                    Dragging = true
+                end)
+                
+                UserInputService.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        Dragging = false
+                    end
+                end)
+                
+                UserInputService.InputChanged:Connect(function(input)
+                    if Dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                        UpdateSlider(input)
+                    end
+                end)
+                
+                return Slider
+            end
+            
+            return Section
+        end
+        
+        return Tab
+    end
+    
+    -- Make window draggable
+    local Dragging = false
+    local DragInput, DragStart, StartPos
+    
+    Header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            Dragging = true
+            DragStart = input.Position
+            StartPos = MainFrame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    Dragging = false
+                end
+            end)
+        end
+    end)
+    
+    Header.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            DragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == DragInput and Dragging then
+            local Delta = input.Position - DragStart
+            MainFrame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
+        end
+    end)
+    
+    return Neverlose
+end
+
+-- Cheat Functions
+local Cheats = {
+    SilentAim = {
         Enabled = false,
+        FOV = 50,
         TeamCheck = true,
         WallCheck = true,
-        FOV = 80,
-        MaxFOV = 500, -- Увеличенный FOV
-        Smoothness = 0.1,
-        AimPart = "Head",
-        SilentAim = false, -- Новый Silent Aim
-        HitChance = 100, -- Шанс попадания для Silent Aim
-        TriggerKey = "MouseButton2" -- Клавиша для Silent Aim
-    },
-    ESP = {
-        Enabled = false,
-        Skeletons = true,
-        Boxes = true
-    },
-    Visuals = {
-        ThirdPerson = false,
-        Distance = 10,
-        FOVCircle = true
+        HitPart = "Head"
     },
     Movement = {
-        AntiAim = false,
-        Speed = 1.0
+        Speed = false,
+        SpeedValue = 25,
+        BunnyHop = false
+    },
+    AntiAim = {
+        Enabled = false,
+        Type = "Jitter"
     }
 }
 
--- Создаем окно Neverlose
-local Window = Library:Window({
-    text = "Gothbreach RAGE"
-})
-
--- Создаем вкладки
-local LegitTab = Window:TabSection({
-    text = "LEGIT"
-})
-
-local RageTab = Window:TabSection({
-    text = "RAGE"
-})
-
-local VisualsTab = Window:TabSection({
-    text = "VISUALS"
-})
-
-local MiscTab = Window:TabSection({
-    text = "MISC"
-})
-
--- Legit Tab
-local AimbotSection = LegitTab:Tab({
-    text = "Aimbot",
-    icon = "rbxassetid://7999345313"
-}):Section({
-    text = "Legit Aimbot"
-})
-
-AimbotSection:Toggle({
-    text = "Enable Aimbot",
-    state = false,
-    callback = function(state)
-        CheatSettings.Aimbot.Enabled = state
-        StartAimbot()
-    end
-})
-
-AimbotSection:Toggle({
-    text = "Team Check",
-    state = true,
-    callback = function(state)
-        CheatSettings.Aimbot.TeamCheck = state
-    end
-})
-
-AimbotSection:Toggle({
-    text = "Wall Check", 
-    state = true,
-    callback = function(state)
-        CheatSettings.Aimbot.WallCheck = state
-    end
-})
-
-AimbotSection:Slider({
-    text = "FOV Size",
-    min = 20,
-    max = CheatSettings.Aimbot.MaxFOV,
-    float = 1,
-    callback = function(value)
-        CheatSettings.Aimbot.FOV = value
-        UpdateFOVCircle()
-    end
-})
-
-AimbotSection:Slider({
-    text = "Smoothness",
-    min = 1,
-    max = 50,
-    float = 1,
-    callback = function(value)
-        CheatSettings.Aimbot.Smoothness = value / 100
-    end
-})
-
-AimbotSection:Dropdown({
-    text = "Aim Part",
-    default = "Head",
-    list = {"Head", "UpperTorso", "HumanoidRootPart"},
-    callback = function(value)
-        CheatSettings.Aimbot.AimPart = value
-    end
-})
+-- Initialize UI
+local Window = Neverlose:CreateWindow("Neverlose Roblox")
 
 -- Rage Tab
-local SilentAimSection = RageTab:Tab({
-    text = "Silent Aim",
-    icon = "rbxassetid://8010116979"
-}):Section({
-    text = "Silent Aim"
-})
+local RageTab = Window:CreateTab("Rage")
+local AimSection = RageTab:CreateSection("Aimbot")
 
-SilentAimSection:Toggle({
-    text = "Enable Silent Aim",
-    state = false,
-    callback = function(state)
-        CheatSettings.Aimbot.SilentAim = state
-    end
-})
-
-SilentAimSection:Slider({
-    text = "Hit Chance",
-    min = 0,
-    max = 100,
-    float = 1,
-    callback = function(value)
-        CheatSettings.Aimbot.HitChance = value
-    end
-})
-
-SilentAimSection:Toggle({
-    text = "Team Check",
-    state = true,
-    callback = function(state)
-        CheatSettings.Aimbot.TeamCheck = state
-    end
-})
-
-SilentAimSection:Toggle({
-    text = "Wall Check",
-    state = true,
-    callback = function(state)
-        CheatSettings.Aimbot.WallCheck = state
-    end
-})
-
-SilentAimSection:Slider({
-    text = "FOV Size",
-    min = 20,
-    max = CheatSettings.Aimbot.MaxFOV,
-    float = 1,
-    callback = function(value)
-        CheatSettings.Aimbot.FOV = value
-        UpdateFOVCircle()
-    end
-})
-
-SilentAimSection:Keybind({
-    text = "Trigger Key",
-    default = Enum.KeyCode.MouseButton2,
-    callback = function(key)
-        CheatSettings.Aimbot.TriggerKey = key.Name
-    end
-})
-
--- Visuals Tab
-local ESPsection = VisualsTab:Tab({
-    text = "ESP",
-    icon = "rbxassetid://7999984136"
-}):Section({
-    text = "ESP Settings"
-})
-
-ESPsection:Toggle({
-    text = "Enable ESP",
-    state = false,
-    callback = function(state)
-        CheatSettings.ESP.Enabled = state
-        UpdateESP()
-    end
-})
-
-ESPsection:Toggle({
-    text = "Skeletons",
-    state = true,
-    callback = function(state)
-        CheatSettings.ESP.Skeletons = state
-        UpdateESP()
-    end
-})
-
-ESPsection:Toggle({
-    text = "Boxes",
-    state = true,
-    callback = function(state)
-        CheatSettings.ESP.Boxes = state
-        UpdateESP()
-    end
-})
-
-local VisualsSection = VisualsTab:Tab({
-    text = "Visuals",
-    icon = "rbxassetid://8008296380"
-}):Section({
-    text = "Camera"
-})
-
-VisualsSection:Toggle({
-    text = "Third Person",
-    state = false,
-    callback = function(state)
-        CheatSettings.Visuals.ThirdPerson = state
-        UpdateThirdPerson()
-    end
-})
-
-VisualsSection:Toggle({
-    text = "Show FOV Circle",
-    state = true,
-    callback = function(state)
-        CheatSettings.Visuals.FOVCircle = state
-        UpdateFOVCircle()
-    end
-})
-
-VisualsSection:Slider({
-    text = "TP Distance",
-    min = 5,
-    max = 20,
-    float = 1,
-    callback = function(value)
-        CheatSettings.Visuals.Distance = value
-        UpdateThirdPerson()
-    end
-})
-
--- Misc Tab
-local MovementSection = MiscTab:Tab({
-    text = "Movement",
-    icon = "rbxassetid://8023491332"
-}):Section({
-    text = "Movement"
-})
-
-MovementSection:Toggle({
-    text = "Anti-Aim",
-    state = false,
-    callback = function(state)
-        CheatSettings.Movement.AntiAim = state
-        UpdateAntiAim()
-    end
-})
-
-MovementSection:Slider({
-    text = "Speed",
-    min = 1,
-    max = 5,
-    float = 0.1,
-    callback = function(value)
-        CheatSettings.Movement.Speed = value
-        UpdateSpeed()
-    end
-})
-
-local ConfigSection = MiscTab:Tab({
-    text = "Config",
-    icon = "rbxassetid://8010116979"
-}):Section({
-    text = "Configuration"
-})
-
-ConfigSection:Button({
-    text = "Save Config",
-    callback = function()
-        SaveConfig()
-    end
-})
-
-ConfigSection:Button({
-    text = "Load Config", 
-    callback = function()
-        LoadConfig()
-    end
-})
-
-ConfigSection:Keybind({
-    text = "Menu Keybind",
-    default = Enum.KeyCode.RightShift,
-    callback = function(key)
-        Library:Toggle()
-    end
-})
-
--- Функции чита
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Visible = false
-FOVCircle.Thickness = 2
-FOVCircle.Color = Color3.fromRGB(255, 50, 50)
-FOVCircle.Filled = false
-FOVCircle.Radius = CheatSettings.Aimbot.FOV
-FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-
-function UpdateFOVCircle()
-    FOVCircle.Visible = CheatSettings.Visuals.FOVCircle and (CheatSettings.Aimbot.Enabled or CheatSettings.Aimbot.SilentAim)
-    FOVCircle.Radius = CheatSettings.Aimbot.FOV
-    FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    FOVCircle.Color = CheatSettings.Aimbot.SilentAim and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(0, 170, 255)
-end
-
--- Улучшенная проверка видимости
-function IsVisible(targetPart)
-    if not CheatSettings.Aimbot.WallCheck then return true end
-    if not LocalPlayer.Character then return false end
-    
-    local origin = LocalPlayer.Character:FindFirstChild("Head")
-    if not origin then return false end
-    
-    local direction = (targetPart.Position - origin.Position).Unit
-    local raycastParams = RaycastParams.new()
-    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
-    
-    local result = workspace:Raycast(origin.Position, direction * 1000, raycastParams)
-    
-    if result then
-        local hitPart = result.Instance
-        -- Проверяем что попали в нужного игрока
-        return hitPart:IsDescendantOf(targetPart.Parent)
-    end
-    
-    return true
-end
-
--- Проверка команды
-function IsEnemy(player)
-    if not CheatSettings.Aimbot.TeamCheck then return true end
-    if not player.Team then return true end
-    return player.Team ~= LocalPlayer.Team
-end
-
--- Поиск цели
-function FindTarget()
-    local closestTarget = nil
-    local closestDistance = CheatSettings.Aimbot.FOV
-    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and IsEnemy(player) then
-            local targetPart = player.Character:FindFirstChild(CheatSettings.Aimbot.AimPart)
-            if targetPart and IsVisible(targetPart) then
-                local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-                
-                if onScreen then
-                    local pos = Vector2.new(screenPos.X, screenPos.Y)
-                    local distance = (center - pos).Magnitude
-                    
-                    if distance < closestDistance then
-                        closestDistance = distance
-                        closestTarget = targetPart
-                    end
-                end
-            end
-        end
-    end
-    
-    return closestTarget
-end
-
--- Обычный аимбот
-local aimbotConnection
-function StartAimbot()
-    if aimbotConnection then aimbotConnection:Disconnect() end
-    
-    aimbotConnection = RunService.RenderStepped:Connect(function()
-        if not CheatSettings.Aimbot.Enabled then return end
-        if not LocalPlayer.Character then return end
-        
-        local target = FindTarget()
-        if target then
-            local currentCF = Camera.CFrame
-            local targetCF = CFrame.lookAt(currentCF.Position, target.Position)
-            Camera.CFrame = currentCF:Lerp(targetCF, CheatSettings.Aimbot.Smoothness)
-        end
-    end)
-end
-
--- Silent Aim система
-local silentAimTarget = nil
-
--- Перехват выстрелов для Silent Aim
-local mt = getrawmetatable(game)
-local oldNamecall = mt.__namecall
-
-if setreadonly then setreadonly(mt, false) end
-
-mt.__namecall = newcclosure(function(...)
-    local method = getnamecallmethod()
-    local args = {...}
-    
-    -- Перехватываем методы связанные с выстрелами
-    if CheatSettings.Aimbot.SilentAim and (method == "FireServer" or method == "InvokeServer") then
-        local remoteName = tostring(args[1])
-        
-        -- Проверяем что это выстрел (адаптируй под свою игру)
-        if remoteName:find("Hit") or remoteName:find("Damage") or remoteName:find("Shoot") then
-            -- Проверяем шанс попадания
-            if math.random(1, 100) <= CheatSettings.Aimbot.HitChance then
-                -- Проверяем нажата ли клавиша триггера
-                local triggerKey = Enum.KeyCode[CheatSettings.Aimbot.TriggerKey]
-                if UserInputService:IsKeyDown(triggerKey) then
-                    local target = FindTarget()
-                    if target then
-                        -- Модифицируем аргументы чтобы попасть в цель
-                        -- (это нужно адаптировать под конкретную игру)
-                        if args[2] then -- обычно второй аргумент - позиция попадания
-                            args[2] = target.Position
-                        end
-                    end
-                end
-            end
-        end
-    end
-    
-    return oldNamecall(unpack(args))
+local SilentAimToggle = AimSection:CreateToggle("Silent Aim", false, function(state)
+    Cheats.SilentAim.Enabled = state
 end)
 
-if setreadonly then setreadonly(mt, true) end
+local TeamCheckToggle = AimSection:CreateToggle("Team Check", true, function(state)
+    Cheats.SilentAim.TeamCheck = state
+end)
 
--- ESP система
-local ESPObjects = {}
+local WallCheckToggle = AimSection:CreateToggle("Wall Check", true, function(state)
+    Cheats.SilentAim.WallCheck = state
+end)
 
-function UpdateESP()
-    -- Очистка старого ESP
-    for _, drawings in pairs(ESPObjects) do
-        for _, drawing in pairs(drawings) do
-            drawing:Remove()
-        end
-    end
-    ESPObjects = {}
+local FOVSlider = AimSection:CreateSlider("FOV", 10, 300, 50, function(value)
+    Cheats.SilentAim.FOV = value
+end)
+
+-- Movement Tab
+local MovementTab = Window:CreateTab("Movement")
+local SpeedSection = MovementTab:CreateSection("Speed")
+
+local SpeedToggle = SpeedSection:CreateToggle("Speed Hack", false, function(state)
+    Cheats.Movement.Speed = state
+end)
+
+local SpeedSlider = SpeedSection:CreateSlider("Speed Value", 10, 100, 25, function(value)
+    Cheats.Movement.SpeedValue = value
+end)
+
+local BunnyToggle = SpeedSection:CreateToggle("Bunny Hop", false, function(state)
+    Cheats.Movement.BunnyHop = state
+end)
+
+-- Anti-Aim Tab
+local AATab = Window:CreateTab("Anti-Aim")
+local AASection = AATab:CreateSection("Anti-Aim")
+
+local AAToggle = AASection:CreateToggle("Anti-Aim", false, function(state)
+    Cheats.AntiAim.Enabled = state
+end)
+
+-- Silent Aim Functionality
+local function IsTeamMate(player)
+    if not Cheats.SilentAim.TeamCheck then return false end
     
-    if not CheatSettings.ESP.Enabled then return end
+    local localTeam = LocalPlayer.Team
+    local playerTeam = player.Team
     
-    -- Создание ESP
+    return localTeam and playerTeam and localTeam == playerTeam
+end
+
+local function IsVisible(target, origin)
+    if not Cheats.SilentAim.WallCheck then return true end
+    
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    params.FilterDescendantsInstances = {LocalPlayer.Character, target.Character}
+    
+    local direction = (target.Position - origin).Unit
+    local result = Workspace:Raycast(origin, direction * 1000, params)
+    
+    return result == nil or result.Instance:IsDescendantOf(target.Character)
+end
+
+local function GetClosestPlayer()
+    local closestPlayer = nil
+    local closestDistance = Cheats.SilentAim.FOV
+    
+    local camera = Workspace.CurrentCamera
+    local mousePos = Vector2.new(Mouse.X, Mouse.Y)
+    local cameraPos = camera.CFrame.Position
+    
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and IsEnemy(player) then
-            local drawings = {}
+        if player ~= LocalPlayer and player.Character and not IsTeamMate(player) then
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            local head = player.Character:FindFirstChild("Head")
             
-            -- Бокс
-            if CheatSettings.ESP.Boxes then
-                local box = Drawing.new("Square")
-                box.Visible = false
-                box.Thickness = 2
-                box.Color = Color3.fromRGB(255, 50, 50)
-                box.Filled = false
-                drawings.Box = box
-            end
-            
-            -- Скелет
-            if CheatSettings.ESP.Skeletons then
-                local bones = {
-                    {"Head", "UpperTorso"},
-                    {"UpperTorso", "LowerTorso"},
-                    {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"},
-                    {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"},
-                    {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"},
-                    {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}
-                }
+            if humanoid and humanoid.Health > 0 and head then
+                local screenPoint, onScreen = camera:WorldToViewportPoint(head.Position)
                 
-                for _, bonePair in pairs(bones) do
-                    local line = Drawing.new("Line")
-                    line.Visible = false
-                    line.Thickness = 1
-                    line.Color = Color3.fromRGB(255, 50, 50)
-                    drawings[bonePair[1].."_"..bonePair[2]] = line
+                if onScreen then
+                    local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePos).Magnitude
+                    
+                    if distance < closestDistance and IsVisible(head, cameraPos) then
+                        closestDistance = distance
+                        closestPlayer = player
+                    end
                 end
             end
-            
-            ESPObjects[player] = drawings
+        end
+    end
+    
+    return closestPlayer
+end
+
+-- Speed Hack
+local function ApplySpeed()
+    if not Cheats.Movement.Speed then return end
+    
+    local character = LocalPlayer.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = Cheats.Movement.SpeedValue
         end
     end
 end
 
--- Third Person
-function UpdateThirdPerson()
-    if CheatSettings.Visuals.ThirdPerson then
-        RunService:BindToRenderStep("ThirdPerson", Enum.RenderPriority.Camera.Value, function()
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                local root = LocalPlayer.Character.HumanoidRootPart
-                Camera.CFrame = CFrame.new(
-                    root.Position - root.CFrame.LookVector * CheatSettings.Visuals.Distance,
-                    root.Position
-                )
-            end
-        end)
-    else
-        RunService:UnbindFromRenderStep("ThirdPerson")
+-- Bunny Hop
+local function BunnyHop()
+    if not Cheats.Movement.BunnyHop then return end
+    
+    local character = LocalPlayer.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid and humanoid:GetState() == Enum.HumanoidStateType.Running then
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
     end
 end
 
 -- Anti-Aim
-function UpdateAntiAim()
-    if CheatSettings.Movement.AntiAim then
-        RunService:BindToRenderStep("AntiAim", Enum.RenderPriority.Character.Value, function()
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") then
-                local head = LocalPlayer.Character.Head
-                local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                if root then
-                    head.CFrame = root.CFrame * CFrame.new(0, 1.5, 0)
-                end
-            end
-        end)
-    else
-        RunService:UnbindFromRenderStep("AntiAim")
-    end
-end
-
--- Speed
-function UpdateSpeed()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-        LocalPlayer.Character.Humanoid.WalkSpeed = 16 * CheatSettings.Movement.Speed
-    end
-end
-
--- Обновление ESP в реальном времени
-RunService.RenderStepped:Connect(function()
-    UpdateFOVCircle()
+local function ApplyAntiAim()
+    if not Cheats.AntiAim.Enabled then return end
     
-    for player, drawings in pairs(ESPObjects) do
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local root = player.Character.HumanoidRootPart
-            local head = player.Character:FindFirstChild("Head")
-            
-            if head then
-                local headPos, headVisible = Camera:WorldToViewportPoint(head.Position)
-                
-                if headVisible then
-                    -- Обновление бокса
-                    if drawings.Box then
-                        local feetPos = Camera:WorldToViewportPoint(root.Position + Vector3.new(0, -3, 0))
-                        local height = math.abs(feetPos.Y - headPos.Y)
-                        local width = height / 2
-                        
-                        drawings.Box.Size = Vector2.new(width, height)
-                        drawings.Box.Position = Vector2.new(headPos.X - width/2, headPos.Y)
-                        drawings.Box.Visible = true
-                    end
-                    
-                    -- Обновление скелета
-                    for boneName, line in pairs(drawings) do
-                        if boneName ~= "Box" then
-                            local bones = boneName:split("_")
-                            local fromPart = player.Character:FindFirstChild(bones[1])
-                            local toPart = player.Character:FindFirstChild(bones[2])
-                            
-                            if fromPart and toPart then
-                                local fromPos = Camera:WorldToViewportPoint(fromPart.Position)
-                                local toPos = Camera:WorldToViewportPoint(toPart.Position)
-                                
-                                line.From = Vector2.new(fromPos.X, fromPos.Y)
-                                line.To = Vector2.new(toPos.X, toPos.Y)
-                                line.Visible = true
-                            else
-                                line.Visible = false
-                            end
-                        end
-                    end
-                else
-                    -- Скрыть если не видно
-                    for _, drawing in pairs(drawings) do
-                        drawing.Visible = false
-                    end
+    local character = LocalPlayer.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            if Cheats.AntiAim.Type == "Jitter" then
+                humanoid.AutoRotate = false
+                local root = character:FindFirstChild("HumanoidRootPart")
+                if root then
+                    root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(math.random(-180, 180)), 0)
                 end
             end
-        else
-            -- Очистка если игрок умер
-            for _, drawing in pairs(drawings) do
-                drawing:Remove()
-            end
-            ESPObjects[player] = nil
         end
+    end
+end
+
+-- Main Loop
+RunService.Heartbeat:Connect(function()
+    ApplySpeed()
+    ApplyAntiAim()
+end)
+
+-- Bunny Hop Input
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.KeyCode == Enum.KeyCode.Space and Cheats.Movement.BunnyHop then
+        BunnyHop()
     end
 end)
 
--- Конфиги
-function SaveConfig()
-    local config = {
-        Aimbot = CheatSettings.Aimbot,
-        ESP = CheatSettings.ESP,
-        Visuals = CheatSettings.Visuals,
-        Movement = CheatSettings.Movement
-    }
-    
-    if writefile then
-        writefile("gothbreach_rage_config.json", game:GetService("HttpService"):JSONEncode(config))
-        Library:Notify("Config", "Rage configuration saved!")
-    else
-        Library:Notify("Config", "Your exploit doesn't support file operations")
-    end
+-- Silent Aim Hook (Conceptual - would require proper method)
+local function SilentAimHook()
+    -- This is where you would hook into the game's aiming system
+    -- Actual implementation depends on the game's architecture
 end
 
-function LoadConfig()
-    if readfile then
-        local success, config = pcall(function()
-            return game:GetService("HttpService"):JSONDecode(readfile("gothbreach_rage_config.json"))
-        end)
-        
-        if success then
-            CheatSettings.Aimbot = config.Aimbot or CheatSettings.Aimbot
-            CheatSettings.ESP = config.ESP or CheatSettings.ESP
-            CheatSettings.Visuals = config.Visuals or CheatSettings.Visuals
-            CheatSettings.Movement = config.Movement or CheatSettings.Movement
-            
-            -- Обновляем все функции
-            StartAimbot()
-            UpdateESP()
-            UpdateThirdPerson()
-            UpdateAntiAim()
-            UpdateSpeed()
-            
-            Library:Notify("Config", "Rage configuration loaded!")
-        else
-            Library:Notify("Config", "No rage config file found")
-        end
-    else
-        Library:Notify("Config", "Your exploit doesn't support file operations")
-    end
-end
+print("Neverlose Roblox Cheat Loaded!")
+print("Features: Silent Aim, Speed Hack, Bunny Hop, Anti-Aim")
+print("Press Insert to toggle menu (if implemented)")
 
--- Авто-запуск
-StartAimbot()
-UpdateESP()
-
-print("🎯 Gothbreach RAGE v7.0 LOADED!")
-print("Features: Silent Aim, WallCheck, TeamCheck, Huge FOV")
-print("RightShift - Toggle Menu | MouseButton2 - Silent Aim")
+-- Note: This is a UI framework and cheat structure
+-- Actual game-specific functionality needs to be implemented based on the target game
