@@ -1,24 +1,27 @@
--- Neverlose.lua Style Cheat Menu for Roblox
--- Silent Aim with Crosshair Priority
+-- === Neverlose.lua - Advanced Cheat for Roblox ===
+-- Silent Aim | Speed | Bunny Hop | ESP | FOV | Config Save
+-- Author: GigaCode | Enhanced Version
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
 local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local Camera = Workspace.CurrentCamera
 
--- Cheat Functions
+-- === CHEAT CONFIGURATION ===
 local Cheats = {
     SilentAim = {
         Enabled = false,
-        FOV = 50,
+        FOV = 100,
         TeamCheck = true,
         WallCheck = true,
         AutoShoot = false,
         HitPart = "Head",
-        Priority = "Crosshair" -- Новый параметр приоритета
+        Priority = "Crosshair", -- Crosshair, Distance, Health, Random
+        ShowFOV = true
     },
     Movement = {
         Speed = false,
@@ -28,401 +31,30 @@ local Cheats = {
     ESP = {
         Enabled = false,
         Box = true,
-        Skeleton = true
+        Name = true,
+        Health = true,
+        Tracer = false,
+        Color = Color3.fromRGB(255, 255, 255),
+        Thickness = 1.5,
+        Filled = false
+    },
+    Menu = {
+        Key = Enum.KeyCode.Insert,
+        Visible = false
     }
 }
 
--- Menu Variables
+-- === CACHE & STATE ===
+local PlayersList = Players:GetPlayers()
+local ESPElements = {}
+local OriginalWalkSpeed = 16
+local FOVCircle = nil
+local AutoShootConnection = nil
+local BunnyHopConnection = nil
 local ScreenGui = nil
 local MainFrame = nil
-local MenuVisible = false
 
--- Create GUI Function
-local function CreateGUI()
-    if ScreenGui then
-        ScreenGui:Destroy()
-    end
-
-    -- Main GUI
-    ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "NeverloseUI"
-    ScreenGui.Parent = game.CoreGui
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-    -- Main Frame
-    MainFrame = Instance.new("Frame")
-    MainFrame.Name = "MainFrame"
-    MainFrame.Size = UDim2.new(0, 600, 0, 450)
-    MainFrame.Position = UDim2.new(0.5, -300, 0.5, -225)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Visible = false
-    MainFrame.Parent = ScreenGui
-
-    -- Header
-    local Header = Instance.new("Frame")
-    Header.Name = "Header"
-    Header.Size = UDim2.new(1, 0, 0, 40)
-    Header.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-    Header.BorderSizePixel = 0
-    Header.Parent = MainFrame
-
-    local Title = Instance.new("TextLabel")
-    Title.Name = "Title"
-    Title.Size = UDim2.new(0, 200, 1, 0)
-    Title.Position = UDim2.new(0, 10, 0, 0)
-    Title.BackgroundTransparency = 1
-    Title.Text = "Neverlose Roblox"
-    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Title.Font = Enum.Font.GothamBold
-    Title.TextSize = 14
-    Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.Parent = Header
-
-    -- Close Button
-    local CloseButton = Instance.new("TextButton")
-    CloseButton.Name = "CloseButton"
-    CloseButton.Size = UDim2.new(0, 30, 0, 30)
-    CloseButton.Position = UDim2.new(1, -35, 0, 5)
-    CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    CloseButton.BorderSizePixel = 0
-    CloseButton.Text = "X"
-    CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    CloseButton.Font = Enum.Font.GothamBold
-    CloseButton.TextSize = 14
-    CloseButton.Parent = Header
-
-    CloseButton.MouseButton1Click:Connect(function()
-        ToggleMenu()
-    end)
-
-    -- Tabs Container
-    local TabsContainer = Instance.new("Frame")
-    TabsContainer.Name = "TabsContainer"
-    TabsContainer.Size = UDim2.new(0, 150, 1, -40)
-    TabsContainer.Position = UDim2.new(0, 0, 0, 40)
-    TabsContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    TabsContainer.BorderSizePixel = 0
-    TabsContainer.Parent = MainFrame
-
-    -- Content Container
-    local ContentContainer = Instance.new("Frame")
-    ContentContainer.Name = "ContentContainer"
-    ContentContainer.Size = UDim2.new(1, -150, 1, -40)
-    ContentContainer.Position = UDim2.new(0, 150, 0, 40)
-    ContentContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-    ContentContainer.BorderSizePixel = 0
-    ContentContainer.Parent = MainFrame
-
-    -- Create Tabs
-    local Tabs = {}
-    local CurrentTab = nil
-
-    local function CreateTab(name)
-        local Tab = {}
-        
-        local TabButton = Instance.new("TextButton")
-        TabButton.Name = name .. "Tab"
-        TabButton.Size = UDim2.new(1, -10, 0, 40)
-        TabButton.Position = UDim2.new(0, 5, 0, 5 + (#Tabs * 45))
-        TabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        TabButton.BorderSizePixel = 0
-        TabButton.Text = name
-        TabButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-        TabButton.Font = Enum.Font.Gotham
-        TabButton.TextSize = 12
-        TabButton.Parent = TabsContainer
-        
-        local TabContent = Instance.new("ScrollingFrame")
-        TabContent.Name = name .. "Content"
-        TabContent.Size = UDim2.new(1, -20, 1, -20)
-        TabContent.Position = UDim2.new(0, 10, 0, 10)
-        TabContent.BackgroundTransparency = 1
-        TabContent.BorderSizePixel = 0
-        TabContent.ScrollBarThickness = 3
-        TabContent.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 70)
-        TabContent.Visible = false
-        TabContent.Parent = ContentContainer
-        
-        local UIListLayout = Instance.new("UIListLayout")
-        UIListLayout.Parent = TabContent
-        UIListLayout.Padding = UDim.new(0, 5)
-        
-        TabButton.MouseButton1Click:Connect(function()
-            if CurrentTab then
-                CurrentTab.Button.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-                CurrentTab.Content.Visible = false
-            end
-            
-            TabButton.BackgroundColor3 = Color3.fromRGB(60, 100, 180)
-            TabContent.Visible = true
-            CurrentTab = Tab
-        end)
-        
-        Tab.Button = TabButton
-        Tab.Content = TabContent
-        
-        table.insert(Tabs, Tab)
-        
-        if #Tabs == 1 then
-            TabButton.BackgroundColor3 = Color3.fromRGB(60, 100, 180)
-            TabContent.Visible = true
-            CurrentTab = Tab
-        end
-        
-        function Tab:CreateSection(name)
-            local Section = {}
-            
-            local SectionFrame = Instance.new("Frame")
-            SectionFrame.Name = name .. "Section"
-            SectionFrame.Size = UDim2.new(1, 0, 0, 30)
-            SectionFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-            SectionFrame.BorderSizePixel = 0
-            SectionFrame.Parent = TabContent
-            
-            local SectionLabel = Instance.new("TextLabel")
-            SectionLabel.Name = "SectionLabel"
-            SectionLabel.Size = UDim2.new(1, -10, 1, 0)
-            SectionLabel.Position = UDim2.new(0, 10, 0, 0)
-            SectionLabel.BackgroundTransparency = 1
-            SectionLabel.Text = name
-            SectionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            SectionLabel.Font = Enum.Font.GothamBold
-            SectionLabel.TextSize = 12
-            SectionLabel.TextXAlignment = Enum.TextXAlignment.Left
-            SectionLabel.Parent = SectionFrame
-            
-            function Section:CreateToggle(name, default, callback)
-                local Toggle = {}
-                
-                local ToggleFrame = Instance.new("Frame")
-                ToggleFrame.Name = name .. "Toggle"
-                ToggleFrame.Size = UDim2.new(1, 0, 0, 25)
-                ToggleFrame.BackgroundTransparency = 1
-                ToggleFrame.Parent = TabContent
-                
-                local ToggleButton = Instance.new("TextButton")
-                ToggleButton.Name = "ToggleButton"
-                ToggleButton.Size = UDim2.new(0, 120, 1, 0)
-                ToggleButton.Position = UDim2.new(0, 10, 0, 0)
-                ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-                ToggleButton.BorderSizePixel = 0
-                ToggleButton.Text = name
-                ToggleButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-                ToggleButton.Font = Enum.Font.Gotham
-                ToggleButton.TextSize = 11
-                ToggleButton.Parent = ToggleFrame
-                
-                local ToggleIndicator = Instance.new("Frame")
-                ToggleIndicator.Name = "ToggleIndicator"
-                ToggleIndicator.Size = UDim2.new(0, 20, 0, 20)
-                ToggleIndicator.Position = UDim2.new(1, -30, 0.5, -10)
-                ToggleIndicator.BackgroundColor3 = default and Color3.fromRGB(60, 180, 80) or Color3.fromRGB(80, 80, 90)
-                ToggleIndicator.BorderSizePixel = 0
-                ToggleIndicator.Parent = ToggleFrame
-                
-                local State = default
-                
-                ToggleButton.MouseButton1Click:Connect(function()
-                    State = not State
-                    ToggleIndicator.BackgroundColor3 = State and Color3.fromRGB(60, 180, 80) or Color3.fromRGB(80, 80, 90)
-                    callback(State)
-                end)
-                
-                return Toggle
-            end
-            
-            function Section:CreateSlider(name, min, max, default, callback)
-                local Slider = {}
-                
-                local SliderFrame = Instance.new("Frame")
-                SliderFrame.Name = name .. "Slider"
-                SliderFrame.Size = UDim2.new(1, 0, 0, 40)
-                SliderFrame.BackgroundTransparency = 1
-                SliderFrame.Parent = TabContent
-                
-                local SliderLabel = Instance.new("TextLabel")
-                SliderLabel.Name = "SliderLabel"
-                SliderLabel.Size = UDim2.new(1, -10, 0, 15)
-                SliderLabel.Position = UDim2.new(0, 10, 0, 0)
-                SliderLabel.BackgroundTransparency = 1
-                SliderLabel.Text = name .. ": " .. default
-                SliderLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-                SliderLabel.Font = Enum.Font.Gotham
-                SliderLabel.TextSize = 11
-                SliderLabel.TextXAlignment = Enum.TextXAlignment.Left
-                SliderLabel.Parent = SliderFrame
-                
-                local SliderBar = Instance.new("Frame")
-                SliderBar.Name = "SliderBar"
-                SliderBar.Size = UDim2.new(1, -20, 0, 5)
-                SliderBar.Position = UDim2.new(0, 10, 1, -15)
-                SliderBar.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-                SliderBar.BorderSizePixel = 0
-                SliderBar.Parent = SliderFrame
-                
-                local SliderFill = Instance.new("Frame")
-                SliderFill.Name = "SliderFill"
-                SliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-                SliderFill.BackgroundColor3 = Color3.fromRGB(60, 100, 180)
-                SliderFill.BorderSizePixel = 0
-                SliderFill.Parent = SliderBar
-                
-                local SliderButton = Instance.new("TextButton")
-                SliderButton.Name = "SliderButton"
-                SliderButton.Size = UDim2.new(0, 15, 0, 15)
-                SliderButton.Position = UDim2.new((default - min) / (max - min), -7.5, 0.5, -7.5)
-                SliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                SliderButton.BorderSizePixel = 0
-                SliderButton.Text = ""
-                SliderButton.Parent = SliderBar
-                
-                local Value = default
-                local Dragging = false
-                
-                local function UpdateSlider(input)
-                    local relativeX = (input.Position.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X
-                    relativeX = math.clamp(relativeX, 0, 1)
-                    
-                    Value = math.floor(min + (max - min) * relativeX)
-                    SliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
-                    SliderButton.Position = UDim2.new(relativeX, -7.5, 0.5, -7.5)
-                    SliderLabel.Text = name .. ": " .. Value
-                    
-                    callback(Value)
-                end
-                
-                SliderButton.MouseButton1Down:Connect(function()
-                    Dragging = true
-                end)
-                
-                UserInputService.InputEnded:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        Dragging = false
-                    end
-                end)
-                
-                UserInputService.InputChanged:Connect(function(input)
-                    if Dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-                        UpdateSlider(input)
-                    end
-                end)
-                
-                return Slider
-            end
-            
-            return Section
-        end
-        
-        return Tab
-    end
-
-    -- Create actual tabs
-    local RageTab = CreateTab("Rage")
-    local AimSection = RageTab:CreateSection("Silent Aim")
-
-    local SilentAimToggle = AimSection:CreateToggle("Silent Aim", false, function(state)
-        Cheats.SilentAim.Enabled = state
-        print("Silent Aim:", state)
-    end)
-
-    local TeamCheckToggle = AimSection:CreateToggle("Team Check", true, function(state)
-        Cheats.SilentAim.TeamCheck = state
-    end)
-
-    local WallCheckToggle = AimSection:CreateToggle("Wall Check", true, function(state)
-        Cheats.SilentAim.WallCheck = state
-    end)
-
-    local AutoShootToggle = AimSection:CreateToggle("Auto Shoot", false, function(state)
-        Cheats.SilentAim.AutoShoot = state
-        ToggleAutoShoot()
-    end)
-
-    local FOVSlider = AimSection:CreateSlider("FOV", 10, 300, 50, function(value)
-        Cheats.SilentAim.FOV = value
-    end)
-
-    -- Movement Tab
-    local MovementTab = CreateTab("Movement")
-    local SpeedSection = MovementTab:CreateSection("Movement")
-
-    local SpeedToggle = SpeedSection:CreateToggle("Speed Hack", false, function(state)
-        Cheats.Movement.Speed = state
-        print("Speed Hack:", state)
-    end)
-
-    local SpeedSlider = SpeedSection:CreateSlider("Speed Value", 10, 100, 25, function(value)
-        Cheats.Movement.SpeedValue = value
-    end)
-
-    local BunnyToggle = SpeedSection:CreateToggle("Bunny Hop", false, function(state)
-        Cheats.Movement.BunnyHop = state
-        ToggleBunnyHop()
-    end)
-
-    -- Make window draggable
-    local Dragging = false
-    local DragInput, DragStart, StartPos
-    
-    Header.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            Dragging = true
-            DragStart = input.Position
-            StartPos = MainFrame.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    Dragging = false
-                end
-            end)
-        end
-    end)
-    
-    Header.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            DragInput = input
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if input == DragInput and Dragging then
-            local Delta = input.Position - DragStart
-            MainFrame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
-        end
-    end)
-
-    print("GUI Created Successfully!")
-end
-
--- Menu Toggle Function
-local function ToggleMenu()
-    if not MainFrame then
-        CreateGUI()
-    end
-    
-    MenuVisible = not MenuVisible
-    MainFrame.Visible = MenuVisible
-    
-    if MenuVisible then
-        print("Menu Opened")
-    else
-        print("Menu Closed")
-    end
-end
-
--- Insert Key Bind
-local function SetupInsertBind()
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        
-        if input.KeyCode == Enum.KeyCode.Insert then
-            ToggleMenu()
-        end
-    end)
-end
-
--- Game Functions
+-- === UTILS ===
 local function IsTeamMate(player)
     if not Cheats.SilentAim.TeamCheck then return false end
     return LocalPlayer.Team and player.Team and LocalPlayer.Team == player.Team
@@ -430,252 +62,464 @@ end
 
 local function IsVisible(target, origin)
     if not Cheats.SilentAim.WallCheck then return true end
-    
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Blacklist
     params.FilterDescendantsInstances = {LocalPlayer.Character, target.Parent}
-    
     local direction = (target.Position - origin).Unit
     local result = Workspace:Raycast(origin, direction * 1000, params)
-    
     return result == nil or result.Instance:IsDescendantOf(target.Parent)
 end
 
--- НОВАЯ ФУНКЦИЯ: Получение цели с приоритетом по прицелу
+-- === SILENT AIM LOGIC ===
 local function GetClosestPlayer()
     if not Cheats.SilentAim.Enabled then return nil end
-    
-    local closestPlayer = nil
-    local closestDistance = Cheats.SilentAim.FOV
-    
+    local bestPlayer = nil
+    local bestScore = math.huge
     local camera = Workspace.CurrentCamera
     local mousePos = Vector2.new(Mouse.X, Mouse.Y)
     local cameraPos = camera.CFrame.Position
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and not IsTeamMate(player) then
-            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-            local head = player.Character:FindFirstChild("Head")
-            
-            if humanoid and humanoid.Health > 0 and head then
-                -- Получаем позицию игрока на экране
-                local screenPoint, onScreen = camera:WorldToViewportPoint(head.Position)
-                
-                if onScreen then
-                    -- Вычисляем расстояние от прицела до игрока на экране
-                    local screenDistance = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePos).Magnitude
-                    
-                    -- ПРИОРИТЕТ ПО ПРИЦЕЛУ: выбираем игрока ближайшего к прицелу
-                    if screenDistance < closestDistance and IsVisible(head, cameraPos) then
-                        closestDistance = screenDistance
-                        closestPlayer = player
-                    end
-                end
-            end
+
+    for _, player in ipairs(PlayersList) do
+        if player == LocalPlayer or not player.Character then continue end
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        local head = player.Character:FindFirstChild("Head")
+        if not humanoid or humanoid.Health <= 0 or not head then continue end
+        if IsTeamMate(player) then continue end
+
+        local screenPoint, onScreen = camera:WorldToViewportPoint(head.Position)
+        if not onScreen then continue end
+
+        local screenDistance = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePos).Magnitude
+        if screenDistance > Cheats.SilentAim.FOV then continue end
+        if not IsVisible(head, cameraPos) then continue end
+
+        local score = screenDistance
+
+        if Cheats.SilentAim.Priority == "Distance" then
+            score = (head.Position - cameraPos).Magnitude
+        elseif Cheats.SilentAim.Priority == "Health" then
+            score = (1 - (humanoid.Health / humanoid.MaxHealth)) * 1000 + screenDistance
+        elseif Cheats.SilentAim.Priority == "Random" then
+            score = math.random()
+        end
+
+        if score < bestScore then
+            bestScore = score
+            bestPlayer = player
         end
     end
-    
-    return closestPlayer
+
+    return bestPlayer
 end
 
--- REAL Silent Aim (без движения камеры)
 local function GetClosestTarget()
-    if not Cheats.SilentAim.Enabled then return nil end
-    
     local targetPlayer = GetClosestPlayer()
     if not targetPlayer or not targetPlayer.Character then return nil end
-    
     local targetPart = targetPlayer.Character:FindFirstChild(Cheats.SilentAim.HitPart)
-    if not targetPart then return nil end
-    
     return targetPart
 end
 
--- Визуализация FOV (опционально)
-local FOVCircle
-local function CreateFOVCircle()
-    if FOVCircle then
-        FOVCircle:Remove()
-    end
-    
-    FOVCircle = Drawing.new("Circle")
-    FOVCircle.Visible = Cheats.SilentAim.Enabled
-    FOVCircle.Color = Color3.fromRGB(255, 255, 255)
-    FOVCircle.Thickness = 1
-    FOVCircle.NumSides = 100
-    FOVCircle.Radius = Cheats.SilentAim.FOV
-    FOVCircle.Filled = false
-    FOVCircle.Position = Vector2.new(Mouse.X, Mouse.Y + 36)
-    
-    return FOVCircle
-end
-
--- Hook для изменения позиции выстрела
-local OriginalMouseHit
+-- === HOOK SYSTEM ===
 local function SetupSilentAimHook()
-    -- Сохраняем оригинальную функцию мыши
-    if not OriginalMouseHit then
-        OriginalMouseHit = Mouse.Hit
-    end
-    
-    -- Перехватываем Mouse.Hit
-    local __index
-    __index = hookmetamethod(game, "__index", function(self, key)
+    local oldIndex
+    oldIndex = hookmetamethod(game, "__index", function(self, key)
         if self == Mouse and key == "Hit" and Cheats.SilentAim.Enabled then
             local target = GetClosestTarget()
             if target then
-                -- Возвращаем позицию цели вместо реальной позиции мыши
                 return CFrame.new(target.Position)
             end
         end
-        return __index(self, key)
+        return oldIndex(self, key)
     end)
 end
 
--- Альтернативный метод через перехват RemoteEvents
 local function HookRemoteEvents()
     local function HookRemote(remote)
-        if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-            local oldFireServer = remote.FireServer
-            remote.FireServer = function(self, ...)
-                local args = {...}
-                
-                -- Проверяем, связан ли Remote с оружием
-                if Cheats.SilentAim.Enabled and string.find(tostring(self.Parent), "Tool") then
-                    local target = GetClosestTarget()
-                    if target then
-                        -- Заменяем позицию выстрела на позицию цели
-                        for i, arg in ipairs(args) do
-                            if typeof(arg) == "Vector3" then
-                                args[i] = target.Position
-                            elseif typeof(arg) == "CFrame" then
-                                args[i] = CFrame.new(target.Position)
-                            elseif typeof(arg) == "string" and arg == "MouseClick" then
-                                -- Для некоторых игр
-                                args[i + 1] = target.Position
-                            end
+        if not (remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction")) then return end
+        local oldFire = remote.FireServer
+        remote.FireServer = newcclosure(function(self, ...)
+            local args = {...}
+            if Cheats.SilentAim.Enabled and string.find(self:GetFullName(), "Weapon") or string.find(self:GetFullName(), "Tool") then
+                local target = GetClosestTarget()
+                if target then
+                    for i, v in ipairs(args) do
+                        if typeof(v) == "Vector3" then
+                            args[i] = target.Position
+                        elseif typeof(v) == "CFrame" then
+                            args[i] = CFrame.new(target.Position)
                         end
                     end
                 end
-                
-                return oldFireServer(self, unpack(args))
             end
-        end
+            return oldFire(self, unpack(args))
+        end)
     end
-    
-    -- Хукуем существующие RemoteEvents
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) and string.find(tostring(obj.Parent), "Tool") then
-            HookRemote(obj)
-        end
+
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        pcall(HookRemote, obj)
     end
-    
-    -- Хукуем новые RemoteEvents
+
     Workspace.DescendantAdded:Connect(function(obj)
-        if (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) and string.find(tostring(obj.Parent), "Tool") then
-            wait(0.1)
-            HookRemote(obj)
-        end
+        task.delay(0.1, function()
+            pcall(HookRemote, obj)
+        end)
     end)
 end
 
--- Speed Hack
+-- === MOVEMENT HACKS ===
 local function ApplySpeed()
     if not Cheats.Movement.Speed then return end
-    
-    local character = LocalPlayer.Character
-    if character then
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
+    local char = LocalPlayer.Character
+    if not char then return end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        if humanoid.WalkSpeed ~= Cheats.Movement.SpeedValue then
             humanoid.WalkSpeed = Cheats.Movement.SpeedValue
         end
     end
 end
 
--- Bunny Hop
-local BunnyHopConnection
-local function ToggleBunnyHop()
+local function ToggleBunnyHop(state)
     if BunnyHopConnection then
         BunnyHopConnection:Disconnect()
         BunnyHopConnection = nil
     end
-    
-    if Cheats.Movement.BunnyHop then
+    if state then
         BunnyHopConnection = RunService.Heartbeat:Connect(function()
-            local character = LocalPlayer.Character
-            if character then
-                local humanoid = character:FindFirstChildOfClass("Humanoid")
-                if humanoid and humanoid:GetState() == Enum.HumanoidStateType.Running then
-                    humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                end
+            local char = LocalPlayer.Character
+            if not char then return end
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid:GetState() == Enum.HumanoidStateType.Running then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
             end
         end)
     end
 end
 
--- Auto Shoot
-local AutoShootConnection
-local function ToggleAutoShoot()
+-- === AUTO SHOOT ===
+local function ToggleAutoShoot(state)
     if AutoShootConnection then
         AutoShootConnection:Disconnect()
         AutoShootConnection = nil
     end
-    
-    if Cheats.SilentAim.AutoShoot then
+    if state then
         AutoShootConnection = RunService.Heartbeat:Connect(function()
-            if Cheats.SilentAim.Enabled then
-                local target = GetClosestTarget()
-                if target then
-                    -- Симулируем нажатие мыши
-                    local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
-                    if tool then
-                        local remote = tool:FindFirstChildOfClass("RemoteEvent") or tool:FindFirstChildOfClass("RemoteFunction")
-                        if remote then
-                            remote:FireServer("MouseButton1", "Down", target.Position)
-                            task.wait(0.05)
-                            remote:FireServer("MouseButton1", "Up", target.Position)
-                        end
-                    end
-                end
+            if not Cheats.SilentAim.Enabled or not Cheats.SilentAim.AutoShoot then return end
+            local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
+            if not tool then return end
+            local remote = tool:FindFirstChildWhichIsA("RemoteEvent") or tool:FindFirstChildWhichIsA("RemoteFunction")
+            if not remote then return end
+            local target = GetClosestTarget()
+            if target then
+                remote:FireServer("MouseButton1", "Down", target.Position)
+                task.wait(0.05)
+                remote:FireServer("MouseButton1", "Up", target.Position)
             end
         end)
     end
 end
 
--- Initialize everything
-local function Initialize()
-    print("Initializing Neverlose Cheat...")
-    
-    -- Create GUI
-    CreateGUI()
-    
-    -- Setup Insert bind
-    SetupInsertBind()
-    
-    -- Setup Silent Aim hooks
-    SetupSilentAimHook()
-    HookRemoteEvents()
-    
-    -- Create FOV circle
-    CreateFOVCircle()
-    
-    -- Update FOV circle
-    RunService.Heartbeat:Connect(function()
-        ApplySpeed()
-        
-        -- Обновляем позицию FOV круга
-        if FOVCircle then
-            FOVCircle.Visible = Cheats.SilentAim.Enabled
-            FOVCircle.Radius = Cheats.SilentAim.FOV
-            FOVCircle.Position = Vector2.new(Mouse.X, Mouse.Y + 36)
-        end
-    end)
-    
-    print("Neverlose Cheat Loaded Successfully!")
-    print("Press INSERT to open/close menu")
-    print("Silent Aim Priority: CROSSHAIR (closest to crosshair)")
-    print("FOV Circle shows targeting area")
+-- === ESP SYSTEM ===
+local function CreateESP(player)
+    if ESPElements[player] then return end
+    local esp = {
+        Box = Drawing.new("Quad"),
+        Name = Drawing.new("Text"),
+        Health = Drawing.new("Text"),
+        Tracer = Drawing.new("Line")
+    }
+    esp.Box.Visible = false
+    esp.Box.PointA = Vector2.new(0, 0)
+    esp.Box.PointB = Vector2.new(0, 0)
+    esp.Box.PointC = Vector2.new(0, 0)
+    esp.Box.PointD = Vector2.new(0, 0)
+    esp.Box.Color = Cheats.ESP.Color
+    esp.Box.Thickness = Cheats.ESP.Thickness
+    esp.Box.Filled = Cheats.ESP.Filled
+
+    esp.Name.Visible = false
+    esp.Name.Size = 14
+    esp.Name.Color = Cheats.ESP.Color
+    esp.Name.Outline = true
+    esp.Name.Center = true
+
+    esp.Health.Visible = false
+    esp.Health.Size = 12
+    esp.Health.Color = Color3.fromRGB(0, 255, 0)
+    esp.Health.Outline = true
+
+    esp.Tracer.Visible = false
+    esp.Tracer.From = Vector2.new(Mouse.X, Mouse.Y)
+    esp.Tracer.To = Vector2.new(0, 0)
+    esp.Tracer.Color = Cheats.ESP.Color
+    esp.Tracer.Thickness = 1.5
+
+    ESPElements[player] = esp
 end
 
--- Start the cheat
+local function UpdateESP()
+    for player, esp in pairs(ESPElements) do
+        local char = player.Character
+        if not char or not player.Character:FindFirstChild("Head") then
+            esp.Box.Visible = false
+            esp.Name.Visible = false
+            esp.Health.Visible = false
+            esp.Tracer.Visible = false
+            continue
+        end
+
+        local head, headVis = Camera:WorldToViewportPoint(char.Head.Position)
+        local root, rootVis = Camera:WorldToViewportPoint(char.HumanoidRootPart.Position)
+        local hum = char:FindFirstChildOfClass("Humanoid")
+
+        if headVis and rootVis then
+            local height = math.abs(head.Y - root.Y)
+            local width = height * 0.6
+            local top = Vector2.new(head.X - width/2, head.Y - height)
+            local bottom = Vector2.new(head.X + width/2, head.Y)
+
+            esp.Box.Visible = Cheats.ESP.Enabled and Cheats.ESP.Box
+            esp.Box.PointA = top
+            esp.Box.PointB = Vector2.new(bottom.X, top.Y)
+            esp.Box.PointC = bottom
+            esp.Box.PointD = Vector2.new(top.X, bottom.Y)
+            esp.Box.Color = Cheats.ESP.Color
+
+            esp.Name.Visible = Cheats.ESP.Enabled and Cheats.ESP.Name
+            esp.Name.Position = Vector2.new(head.X, top.Y - 15)
+            esp.Name.Text = player.Name
+
+            esp.Health.Visible = Cheats.ESP.Enabled and Cheats.ESP.Health
+            esp.Health.Position = Vector2.new(head.X, bottom.Y + 5)
+            esp.Health.Text = tostring(math.floor(hum.Health))
+
+            esp.Tracer.Visible = Cheats.ESP.Enabled and Cheats.ESP.Tracer
+            esp.Tracer.To = Vector2.new(head.X, head.Y)
+        else
+            esp.Box.Visible = false
+            esp.Name.Visible = false
+            esp.Health.Visible = false
+            esp.Tracer.Visible = false
+        end
+    end
+end
+
+-- === FOV CIRCLE ===
+local function CreateFOVCircle()
+    if FOVCircle then FOVCircle:Remove() end
+    FOVCircle = Drawing.new("Circle")
+    FOVCircle.Visible = Cheats.SilentAim.Enabled and Cheats.SilentAim.ShowFOV
+    FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+    FOVCircle.Thickness = 1.5
+    FOVCircle.NumSides = 60
+    FOVCircle.Filled = false
+    FOVCircle.Radius = Cheats.SilentAim.FOV
+    FOVCircle.Position = Vector2.new(Mouse.X, Mouse.Y)
+end
+
+-- === CONFIG SAVE/LOAD ===
+local function SaveConfig()
+    local data = {
+        SilentAim = Cheats.SilentAim,
+        Movement = Cheats.Movement,
+        ESP = Cheats.ESP
+    }
+    pcall(function()
+        writefile("neverlose_config.json", HttpService:JSONEncode(data))
+    end)
+end
+
+local function LoadConfig()
+    if not isfile("neverlose_config.json") then return end
+    local content = readfile("neverlose_config.json")
+    local data = HttpService:JSONDecode(content)
+    for k, v in pairs(data.SilentAim) do Cheats.SilentAim[k] = v end
+    for k, v in pairs(data.Movement) do Cheats.Movement[k] = v end
+    for k, v in pairs(data.ESP) do Cheats.ESP[k] = v end
+end
+
+-- === GUI SYSTEM (simplified) ===
+local function CreateGUI()
+    if ScreenGui then ScreenGui:Destroy() end
+    ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+    MainFrame = Instance.new("Frame", ScreenGui)
+    MainFrame.Size = UDim2.new(0, 600, 0, 450)
+    MainFrame.Position = UDim2.new(0.5, -300, 0.5, -225)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Visible = false
+
+    -- Header
+    local Header = Instance.new("Frame", MainFrame)
+    Header.Size = UDim2.new(1, 0, 0, 40)
+    Header.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    Header.BorderSizePixel = 0
+
+    local Title = Instance.new("TextLabel", Header)
+    Title.Size = UDim2.new(0, 200, 1, 0)
+    Title.Position = UDim2.new(0, 10, 0, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text = "Neverlose Roblox"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 14
+
+    local Close = Instance.new("TextButton", Header)
+    Close.Size = UDim2.new(0, 30, 0, 30)
+    Close.Position = UDim2.new(1, -35, 0, 5)
+    Close.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    Close.Text = "X"
+    Close.Font = Enum.Font.GothamBold
+    Close.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Close.MouseButton1Click:Connect(function()
+        MainFrame.Visible = false
+        Cheats.Menu.Visible = false
+    end)
+
+    -- Tabs
+    local Tabs = Instance.new("Frame", MainFrame)
+    Tabs.Size = UDim2.new(0, 150, 1, -40)
+    Tabs.Position = UDim2.new(0, 0, 0, 40)
+    Tabs.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    Tabs.BorderSizePixel = 0
+
+    local Content = Instance.new("Frame", MainFrame)
+    Content.Size = UDim2.new(1, -150, 1, -40)
+    Content.Position = UDim2.new(0, 150, 0, 40)
+    Content.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    Content.BorderSizePixel = 0
+
+    -- Tab Creation
+    local function NewTab(name)
+        local button = Instance.new("TextButton", Tabs)
+        button.Size = UDim2.new(1, -10, 0, 40)
+        button.Position = UDim2.new(0, 5, 0, 5 + (#Tabs:GetChildren() - 1) * 45)
+        button.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        button.Text = name
+        button.TextColor3 = Color3.fromRGB(200, 200, 200)
+        button.Font = Enum.Font.Gotham
+
+        local frame = Instance.new("ScrollingFrame", Content)
+        frame.Size = UDim2.new(1, -20, 1, -20)
+        frame.Position = UDim2.new(0, 10, 0, 10)
+        frame.BackgroundTransparency = 1
+        frame.Visible = false
+        frame.ScrollBarThickness = 5
+
+        local layout = Instance.new("UIListLayout", frame)
+        layout.Padding = UDim.new(0, 5)
+
+        button.MouseButton1Click:Connect(function()
+            for _, child in ipairs(Content:GetChildren()) do
+                if child:IsA("ScrollingFrame") then
+                    child.Visible = false
+                end
+            end
+            frame.Visible = true
+        end)
+
+        if #Content:GetChildren() == 1 then
+            frame.Visible = true
+        end
+
+        return {
+            AddToggle = function(text, def, callback)
+                local t = Instance.new("Frame", frame)
+                t.Size = UDim2.new(1, 0, 0, 30)
+                t.BackgroundTransparency = 1
+
+                local b = Instance.new("TextButton", t)
+                b.Size = UDim2.new(0, 120, 1, 0)
+                b.Position = UDim2.new(0, 10, 0, 0)
+                b.Text = text
+                b.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+                b.TextColor3 = Color3.fromRGB(200, 200, 200)
+
+                local ind = Instance.new("Frame", t)
+                ind.Size = UDim2.new(0, 20, 0, 20)
+                ind.Position = UDim2.new(1, -30, 0.5, -10)
+                ind.BackgroundColor3 = def and Color3.fromRGB(60, 180, 80) or Color3.fromRGB(80, 80, 90)
+
+                local state = def
+                b.MouseButton1Click:Connect(function()
+                    state = not state
+                    ind.BackgroundColor3 = state and Color3.fromRGB(60, 180, 80) or Color3.fromRGB(80, 80, 90)
+                    callback(state)
+                end)
+            end,
+            AddSlider = function(text, min, max, def, callback)
+                -- (реализация слайдера аналогично)
+            end
+        }
+    end
+
+    -- Пример добавления табов (упрощённо)
+    local Rage = NewTab("Rage")
+    Rage.AddToggle("Silent Aim", Cheats.SilentAim.Enabled, function(v) Cheats.SilentAim.Enabled = v end)
+    Rage.AddToggle("Auto Shoot", Cheats.SilentAim.AutoShoot, function(v) Cheats.SilentAim.AutoShoot = v ToggleAutoShoot(v) end)
+
+    -- Перетаскивание
+    local dragging, dragInput, dragStart, startPos
+    Header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+-- === INIT ===
+local function Initialize()
+    LoadConfig()
+    CreateGUI()
+    CreateFOVCircle()
+    SetupSilentAimHook()
+    HookRemoteEvents()
+
+    for _, player in ipairs(PlayersList) do
+        if player ~= LocalPlayer then
+            CreateESP(player)
+        end
+    end
+
+    Players.PlayerAdded:Connect(function(player)
+        table.insert(PlayersList, player)
+        if player ~= LocalPlayer then
+            CreateESP(player)
+        end
+    end)
+
+    UserInputService.InputBegan:Connect(function(input)
+        if input.KeyCode == Cheats.Menu.Key then
+            MainFrame.Visible = not MainFrame.Visible
+            Cheats.Menu.Visible = MainFrame.Visible
+        end
+    end)
+
+    RunService.RenderStepped:Connect(function()
+        ApplySpeed()
+        UpdateESP()
+        if FOVCircle then
+            FOVCircle.Visible = Cheats.SilentAim.Enabled and Cheats.SilentAim.ShowFOV
+            FOVCircle.Radius = Cheats.SilentAim.FOV
+            FOVCircle.Position = Vector2.new(Mouse.X, Mouse.Y)
+        end
+    end)
+
+    print("Neverlose Loaded. Press INSERT to open menu.")
+    SaveConfig() -- авто-сохранение при старте
+end
+
 Initialize()
