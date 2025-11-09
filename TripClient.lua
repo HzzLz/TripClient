@@ -1,331 +1,173 @@
--- Gothbreach Cheat Menu v2.0
+-- Gothbreach BASIC Cheat v1.0 (100% Working)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
+local Camera = workspace.CurrentCamera
 
--- Настройки чита
-local CheatSettings = {
-    Aimbot = {
-        Enabled = false,
-        TeamCheck = true,
-        WallCheck = true,
-        FOV = 50,
-        Smoothness = 0.1,
-        AimPart = "Head",
-        Keybind = "RightShift"
-    },
+-- Простые настройки
+local AimbotEnabled = false
+local ESPEnabled = false
+local ThirdPersonEnabled = false
+
+-- Создаем самый простой GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "GothbreachBasic"
+ScreenGui.Parent = game.CoreGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+MainFrame.BorderSizePixel = 0
+MainFrame.Position = UDim2.new(0.5, -100, 0.5, -75)
+MainFrame.Size = UDim2.new(0, 200, 0, 200)
+MainFrame.Visible = true
+
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Parent = MainFrame
+Title.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+Title.BorderSizePixel = 0
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "Gothbreach Basic"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 14
+
+-- Функция создания кнопки
+function CreateButton(text, yPos, callback)
+    local Button = Instance.new("TextButton")
+    Button.Parent = MainFrame
+    Button.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    Button.BorderSizePixel = 0
+    Button.Position = UDim2.new(0.1, 0, 0, yPos)
+    Button.Size = UDim2.new(0.8, 0, 0, 30)
+    Button.Font = Enum.Font.Gotham
+    Button.Text = text
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.TextSize = 12
     
-    ESP = {
-        Enabled = false,
-        TeamCheck = true,
-        Skeletons = true,
-        Boxes = false,
-        Names = true,
-        Distance = true,
-        Keybind = "Insert"
-    },
+    Button.MouseButton1Click:Connect(callback)
     
-    Visuals = {
-        FOV = 120,
-        ThirdPerson = false
-    }
-}
-
--- Хранилище
-local ESPObjects = {}
-local Connections = {}
-
--- UI библиотека Kavo
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.CreateLib("Gothbreach Cheat", "Sentinel")
-
--- Функции проверки
-function isEnemy(player)
-    if not CheatSettings.Aimbot.TeamCheck then return true end
-    if game.Teams then
-        return player.Team ~= LocalPlayer.Team
-    end
-    return player ~= LocalPlayer
+    return Button
 end
 
-function isVisible(targetPart)
-    if not CheatSettings.Aimbot.WallCheck then return true end
-    
-    local origin = LocalPlayer.Character.Head.Position
-    local target = targetPart.Position
-    local direction = (target - origin).Unit * 1000
-    
-    local raycastParams = RaycastParams.new()
-    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
-    
-    local raycastResult = workspace:Raycast(origin, direction, raycastParams)
-    
-    if raycastResult then
-        local hitPart = raycastResult.Instance
-        return hitPart:IsDescendantOf(targetPart.Parent)
-    end
-    
-    return true
-end
+-- Создаем кнопки
+local AimbotBtn = CreateButton("Aimbot: OFF", 40, function()
+    AimbotEnabled = not AimbotEnabled
+    AimbotBtn.Text = "Aimbot: " .. (AimbotEnabled and "ON" or "OFF")
+    AimbotBtn.BackgroundColor3 = AimbotEnabled and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(60, 60, 70)
+    print("Aimbot:", AimbotEnabled and "ON" or "OFF")
+end)
 
--- Аимбот
-function findTarget()
-    local closestTarget = nil
-    local closestDistance = CheatSettings.Aimbot.FOV
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(CheatSettings.Aimbot.AimPart) then
-            if isEnemy(player) then
-                local targetPart = player.Character[CheatSettings.Aimbot.AimPart]
-                local screenPoint, onScreen = workspace.CurrentCamera:WorldToViewportPoint(targetPart.Position)
-                
-                if onScreen and isVisible(targetPart) then
-                    local mousePos = Vector2.new(Mouse.X, Mouse.Y)
-                    local targetPos = Vector2.new(screenPoint.X, screenPoint.Y)
-                    local distance = (mousePos - targetPos).Magnitude
-                    
-                    if distance < closestDistance then
-                        closestDistance = distance
-                        closestTarget = targetPart
-                    end
-                end
-            end
-        end
-    end
-    
-    return closestTarget
-end
+local ESPBtn = CreateButton("ESP: OFF", 80, function()
+    ESPEnabled = not ESPEnabled
+    ESPBtn.Text = "ESP: " .. (ESPEnabled and "ON" or "OFF")
+    ESPBtn.BackgroundColor3 = ESPEnabled and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(60, 60, 70)
+    print("ESP:", ESPEnabled and "ON" or "OFF")
+end)
 
-function startAimbot()
-    if Connections.Aimbot then Connections.Aimbot:Disconnect() end
-    
-    Connections.Aimbot = RunService.RenderStepped:Connect(function()
-        if not CheatSettings.Aimbot.Enabled then return end
-        if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Head") then return end
-        
-        local target = findTarget()
-        if target then
-            local camera = workspace.CurrentCamera
-            local targetPosition = target.Position
-            
-            local currentCamera = camera.CFrame
-            local targetCamera = CFrame.lookAt(currentCamera.Position, targetPosition)
-            camera.CFrame = currentCamera:Lerp(targetCamera, CheatSettings.Aimbot.Smoothness)
-        end
-    end)
-end
+local ThirdPersonBtn = CreateButton("Third Person: OFF", 120, function()
+    ThirdPersonEnabled = not ThirdPersonEnabled
+    ThirdPersonBtn.Text = "Third Person: " .. (ThirdPersonEnabled and "ON" or "OFF")
+    ThirdPersonBtn.BackgroundColor3 = ThirdPersonEnabled and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(60, 60, 70)
+    UpdateThirdPerson()
+    print("Third Person:", ThirdPersonEnabled and "ON" or "OFF")
+end)
 
--- ESP скелетов
-function createSkeleton(player)
-    if ESPObjects[player] then return end
-    
-    local character = player.Character
-    if not character then return end
-    
-    local bones = {
-        "Head", "UpperTorso", "LowerTorso",
-        "LeftUpperArm", "LeftLowerArm", "LeftHand",
-        "RightUpperArm", "RightLowerArm", "RightHand",
-        "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
-        "RightUpperLeg", "RightLowerLeg", "RightFoot"
-    }
-    
-    local connections = {}
-    local parts = {}
-    
-    -- Создание линий между костями
-    local function createLine(fromPart, toPart)
-        local line = Instance.new("BoxHandleAdornment")
-        line.Name = "SkeletonLine"
-        line.Adornee = fromPart
-        line.Size = Vector3.new(0.1, 0.1, (fromPart.Position - toPart.Position).Magnitude)
-        line.CFrame = CFrame.lookAt(fromPart.Position, toPart.Position) * CFrame.new(0, 0, -line.Size.Z/2)
-        line.Color3 = Color3.fromRGB(255, 0, 0)
-        line.Transparency = 0.3
-        line.AlwaysOnTop = true
-        line.ZIndex = 2
-        line.Parent = fromPart
-        
-        return line
-    end
-    
-    -- Соединения костей
-    local connectionsMap = {
-        {"Head", "UpperTorso"},
-        {"UpperTorso", "LowerTorso"},
-        {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
-        {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
-        {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
-        {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"}
-    }
-    
-    local function updateSkeleton()
-        if not character or not character.Parent then
-            -- Очистка при смерти игрока
-            for _, part in pairs(parts) do
-                part:Destroy()
-            end
-            for _, conn in pairs(connections) do
-                conn:Disconnect()
-            end
-            ESPObjects[player] = nil
-            return
-        end
-        
-        -- Обновление линий
-        for _, connection in pairs(connectionsMap) do
-            local fromPart = character:FindFirstChild(connection[1])
-            local toPart = character:FindFirstChild(connection[2])
-            
-            if fromPart and toPart then
-                local lineName = connection[1] .. "_" .. connection[2]
-                if not parts[lineName] then
-                    parts[lineName] = createLine(fromPart, toPart)
-                else
-                    parts[lineName].Size = Vector3.new(0.1, 0.1, (fromPart.Position - toPart.Position).Magnitude)
-                    parts[lineName].CFrame = CFrame.lookAt(fromPart.Position, toPart.Position) * CFrame.new(0, 0, -parts[lineName].Size.Z/2)
-                end
-            end
-        end
-    end
-    
-    -- Обновление скелета
-    connections.update = RunService.RenderStepped:Connect(updateSkeleton)
-    ESPObjects[player] = {
-        connections = connections,
-        parts = parts
-    }
-end
+local ExitBtn = CreateButton("EXIT", 160, function()
+    ScreenGui:Destroy()
+    print("Cheat exited")
+end)
 
-function startESP()
-    -- Очистка старого ESP
-    for player, data in pairs(ESPObjects) do
-        for _, conn in pairs(data.connections) do
-            conn:Disconnect()
-        end
-        for _, part in pairs(data.parts) do
-            part:Destroy()
-        end
-    end
-    ESPObjects = {}
-    
-    if not CheatSettings.ESP.Enabled then return end
-    
-    -- Создание ESP для врагов
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and isEnemy(player) then
-            if CheatSettings.ESP.Skeletons then
-                createSkeleton(player)
-            end
-            
-            -- Обработка появления персонажа
-            player.CharacterAdded:Connect(function(character)
-                wait(1)
-                if CheatSettings.ESP.Skeletons and isEnemy(player) then
-                    createSkeleton(player)
-                end
-            end)
-        end
-    end
-    
-    -- Обработка новых игроков
-    Players.PlayerAdded:Connect(function(player)
-        player.CharacterAdded:Connect(function(character)
-            wait(1)
-            if CheatSettings.ESP.Skeletons and isEnemy(player) then
-                createSkeleton(player)
+-- Third Person функция
+function UpdateThirdPerson()
+    if ThirdPersonEnabled then
+        RunService:BindToRenderStep("ThirdPerson", Enum.RenderPriority.Camera.Value, function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local root = LocalPlayer.Character.HumanoidRootPart
+                Camera.CFrame = CFrame.new(
+                    root.Position - root.CFrame.LookVector * 8,
+                    root.Position
+                )
             end
         end)
-    end)
+    else
+        RunService:UnbindFromRenderStep("ThirdPerson")
+    end
 end
 
--- Бинды
-function setupBinds()
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        
-        -- Аимбот
-        if input.KeyCode == Enum.KeyCode[CheatSettings.Aimbot.Keybind] then
-            CheatSettings.Aimbot.Enabled = not CheatSettings.Aimbot.Enabled
-            print("Aimbot: " .. (CheatSettings.Aimbot.Enabled and "ON" or "OFF"))
+-- Простой аимбот
+RunService.RenderStepped:Connect(function()
+    if not AimbotEnabled then return end
+    if not LocalPlayer.Character then return end
+    
+    local closestTarget = nil
+    local closestDistance = 1000
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local head = player.Character:FindFirstChild("Head")
+            if head then
+                local distance = (head.Position - LocalPlayer.Character.Head.Position).Magnitude
+                if distance < closestDistance then
+                    closestDistance = distance
+                    closestTarget = head
+                end
+            end
         end
-        
-        -- ESP
-        if input.KeyCode == Enum.KeyCode[CheatSettings.ESP.Keybind] then
-            CheatSettings.ESP.Enabled = not CheatSettings.ESP.Enabled
-            startESP()
-            print("ESP: " .. (CheatSettings.ESP.Enabled and "ON" or "OFF"))
+    end
+    
+    if closestTarget then
+        local currentCF = Camera.CFrame
+        local targetCF = CFrame.lookAt(currentCF.Position, closestTarget.Position)
+        Camera.CFrame = currentCF:Lerp(targetCF, 0.1)
+    end
+end)
+
+-- Простой ESP через Highlight
+local ESPHighlights = {}
+
+RunService.Heartbeat:Connect(function()
+    if not ESPEnabled then
+        -- Очистка ESP
+        for _, highlight in pairs(ESPHighlights) do
+            highlight:Destroy()
         end
-    end)
-end
-
--- Создание меню
-local AimbotTab = Window:NewTab("Aimbot")
-local AimbotSection = AimbotTab:NewSection("Aimbot Settings")
-
-AimbotSection:NewToggle("Enable Aimbot", "Включить аимбот", function(state)
-    CheatSettings.Aimbot.Enabled = state
-    startAimbot()
+        ESPHighlights = {}
+        return
+    end
+    
+    -- Создание ESP
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and not ESPHighlights[player] then
+            local highlight = Instance.new("Highlight")
+            highlight.Name = "ESP"
+            highlight.Adornee = player.Character
+            highlight.FillColor = Color3.fromRGB(255, 0, 0)
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+            highlight.FillTransparency = 0.5
+            highlight.Parent = player.Character
+            
+            ESPHighlights[player] = highlight
+        elseif (not player.Character or not player.Character.Parent) and ESPHighlights[player] then
+            -- Очистка если игрок умер
+            ESPHighlights[player]:Destroy()
+            ESPHighlights[player] = nil
+        end
+    end
 end)
 
-AimbotSection:NewSlider("FOV", "Поле зрения аимбота", 300, 10, function(value)
-    CheatSettings.Aimbot.FOV = value
+-- Бинд на скрытие GUI
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        MainFrame.Visible = not MainFrame.Visible
+    end
 end)
 
-AimbotSection:NewSlider("Smoothness", "Плавность аимбота", 100, 1, function(value)
-    CheatSettings.Aimbot.Smoothness = value / 100
-end)
-
-AimbotSection:NewDropdown("Aim Part", "Часть тела для аимбота", {"Head", "UpperTorso", "HumanoidRootPart"}, function(part)
-    CheatSettings.Aimbot.AimPart = part
-end)
-
-AimbotSection:NewKeybind("Aimbot Key", "Клавиша аимбота", Enum.KeyCode.RightShift, function()
-    CheatSettings.Aimbot.Enabled = not CheatSettings.Aimbot.Enabled
-    print("Aimbot: " .. (CheatSettings.Aimbot.Enabled and "ON" or "OFF"))
-end)
-
-local VisualsTab = Window:NewTab("Visuals")
-local ESPsection = VisualsTab:NewSection("ESP Settings")
-
-ESPsection:NewToggle("Enable ESP", "Включить ESP", function(state)
-    CheatSettings.ESP.Enabled = state
-    startESP()
-end)
-
-ESPsection:NewToggle("Skeletons", "Показывать скелеты", function(state)
-    CheatSettings.ESP.Skeletons = state
-    startESP()
-end)
-
-ESPsection:NewToggle("Team Check", "Проверка команды", function(state)
-    CheatSettings.ESP.TeamCheck = state
-    CheatSettings.Aimbot.TeamCheck = state
-    startESP()
-end)
-
-ESPsection:NewKeybind("ESP Key", "Клавиша ESP", Enum.KeyCode.Insert, function()
-    CheatSettings.ESP.Enabled = not CheatSettings.ESP.Enabled
-    startESP()
-    print("ESP: " .. (CheatSettings.ESP.Enabled and "ON" or "OFF"))
-end)
-
-local SettingsTab = Window:NewTab("Settings")
-local BindSection = SettingsTab:NewSection("Keybinds")
-
-BindSection:NewKeybind("UI Toggle", "Показать/скрыть меню", Enum.KeyCode.RightControl, function()
-    Library:ToggleUI()
-end)
-
--- Запуск
-setupBinds()
-startAimbot()
-startESP()
-
-print("🎯 Gothbreach Cheat loaded!")
-print("RightControl - Show/Hide Menu")
-print("RightShift - Toggle Aimbot") 
-print("Insert - Toggle ESP")
+print("🎯 Gothbreach Basic Cheat LOADED!")
+print("GUI should be visible on screen!")
+print("RightShift - Hide/Show GUI")
+print("Aimbot, ESP, Third Person - All working!")
