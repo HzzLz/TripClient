@@ -1,4 +1,4 @@
--- Gothbreach Cheat Menu v2.4 OPTIMIZED
+-- Gothbreach Cheat Menu v2.5 + SPINBOT
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -22,12 +22,23 @@ local CheatSettings = {
         TeamCheck = true,
         Skeletons = true,
         Keybind = "Insert"
+    },
+    
+    Movement = {
+        Spinbot = {
+            Enabled = false,
+            Speed = 50,
+            Pitch = -89, -- Взгляд вниз
+            Keybind = "Q",
+            AntiAim = true -- Защита от хедшотов
+        }
     }
 }
 
 -- Хранилище
 local ESPObjects = {}
 local FOVCircle
+local spinbotConnection
 
 -- FOV круг
 function createFOVCircle()
@@ -65,6 +76,60 @@ function isAlive(player)
     return humanoid and humanoid.Health > 0
 end
 
+-- Крутилка (Spinbot)
+function startSpinbot()
+    if spinbotConnection then spinbotConnection:Disconnect() end
+    
+    spinbotConnection = RunService.Heartbeat:Connect(function()
+        if not CheatSettings.Movement.Spinbot.Enabled or not isAlive(LocalPlayer) then 
+            return 
+        end
+        
+        local character = LocalPlayer.Character
+        if not character then return end
+        
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        
+        if humanoid and rootPart then
+            -- Вращение
+            local currentTime = tick()
+            local yaw = (currentTime * CheatSettings.Movement.Spinbot.Speed) % 360
+            
+            -- Создание углов
+            local pitch = math.rad(CheatSettings.Movement.Spinbot.Pitch) -- Взгляд вниз
+            local yawRad = math.rad(yaw)
+            
+            -- Расчет направления взгляда
+            local lookVector = Vector3.new(
+                math.sin(yawRad) * math.cos(pitch),
+                math.sin(pitch),
+                math.cos(yawRad) * math.cos(pitch)
+            )
+            
+            -- Обновление камеры
+            Camera.CFrame = CFrame.new(rootPart.Position + Vector3.new(0, 1.5, 0), 
+                                     rootPart.Position + Vector3.new(0, 1.5, 0) + lookVector)
+            
+            -- Anti-aim защита (голова не выходит вперед)
+            if CheatSettings.Movement.Spinbot.AntiAim then
+                local head = character:FindFirstChild("Head")
+                if head then
+                    -- Фиксируем голову близко к телу
+                    head.CFrame = rootPart.CFrame * CFrame.new(0, 1.5, 0)
+                end
+            end
+        end
+    end)
+end
+
+function stopSpinbot()
+    if spinbotConnection then
+        spinbotConnection:Disconnect()
+        spinbotConnection = nil
+    end
+end
+
 -- Оптимизированный аимбот
 local lastTarget = nil
 local aimbotConnection
@@ -73,7 +138,7 @@ function startAimbot()
     if aimbotConnection then aimbotConnection:Disconnect() end
     
     aimbotConnection = RunService.RenderStepped:Connect(function()
-        if not CheatSettings.Aimbot.Enabled or not isAlive(LocalPlayer) then 
+        if not CheatSettings.Aimbot.Enabled or not isAlive(LocalPlayer) or CheatSettings.Movement.Spinbot.Enabled then 
             lastTarget = nil
             return 
         end
@@ -237,11 +302,20 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         CheatSettings.ESP.Enabled = not CheatSettings.ESP.Enabled
         startESP()
     end
+    
+    if input.KeyCode == Enum.KeyCode[CheatSettings.Movement.Spinbot.Keybind] then
+        CheatSettings.Movement.Spinbot.Enabled = not CheatSettings.Movement.Spinbot.Enabled
+        if CheatSettings.Movement.Spinbot.Enabled then
+            startSpinbot()
+        else
+            stopSpinbot()
+        end
+    end
 end)
 
--- UI (только основные настройки)
+-- UI
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.CreateLib("Gothbreach Lite", "Sentinel")
+local Window = Library.CreateLib("Gothbreach Pro", "Sentinel")
 
 -- Аимбот
 local AimbotTab = Window:NewTab("Aimbot")
@@ -287,6 +361,40 @@ ESPsection:NewToggle("Team Check", "Проверка команды", function(s
     startESP()
 end)
 
+-- Movement (Крутилка)
+local MovementTab = Window:NewTab("Movement")
+local SpinbotSection = MovementTab:NewSection("Spinbot")
+
+SpinbotSection:NewToggle("Enable Spinbot", "Включить крутилку", function(state)
+    CheatSettings.Movement.Spinbot.Enabled = state
+    if state then
+        startSpinbot()
+    else
+        stopSpinbot()
+    end
+end)
+
+SpinbotSection:NewSlider("Spin Speed", "Скорость вращения", 200, 10, function(value)
+    CheatSettings.Movement.Spinbot.Speed = value
+end)
+
+SpinbotSection:NewSlider("Pitch", "Угол наклона", -89, -89, function(value)
+    CheatSettings.Movement.Spinbot.Pitch = value
+end)
+
+SpinbotSection:NewToggle("Anti-Aim", "Защита от хедшотов", function(state)
+    CheatSettings.Movement.Spinbot.AntiAim = state
+end)
+
+SpinbotSection:NewKeybind("Spinbot Key", "Клавиша крутилки", Enum.KeyCode.Q, function()
+    CheatSettings.Movement.Spinbot.Enabled = not CheatSettings.Movement.Spinbot.Enabled
+    if CheatSettings.Movement.Spinbot.Enabled then
+        startSpinbot()
+    else
+        stopSpinbot()
+    end
+end)
+
 -- Настройки
 local SettingsTab = Window:NewTab("Settings")
 SettingsTab:NewKeybind("Toggle UI", "Открыть/закрыть меню", Enum.KeyCode.RightControl, function()
@@ -297,7 +405,8 @@ end)
 createFOVCircle()
 startAimbot()
 
-print("⚡ Gothbreach Lite v2.4 LOADED!")
+print("🌀 Gothbreach Pro v2.5 LOADED!")
 print("RightControl - Menu")
 print("RightShift - Aimbot") 
 print("Insert - ESP")
+print("Q - Spinbot")
