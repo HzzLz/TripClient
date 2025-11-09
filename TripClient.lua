@@ -1,11 +1,12 @@
 -- Neverlose.lua Style Cheat Menu for Roblox
--- Fixed Version with Working Features
+-- Fixed Version with Working Features + Insert Bind
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local Camera = Workspace.CurrentCamera
@@ -29,7 +30,12 @@ function Neverlose:CreateWindow(name)
     MainFrame.Position = UDim2.new(0.5, -300, 0.5, -225)
     MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
     MainFrame.BorderSizePixel = 0
+    MainFrame.Visible = false -- Start hidden
     MainFrame.Parent = ScreenGui
+    
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 8)
+    UICorner.Parent = MainFrame
     
     -- Header
     local Header = Instance.new("Frame")
@@ -38,6 +44,10 @@ function Neverlose:CreateWindow(name)
     Header.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
     Header.BorderSizePixel = 0
     Header.Parent = MainFrame
+    
+    local HeaderCorner = Instance.new("UICorner")
+    HeaderCorner.CornerRadius = UDim.new(0, 8)
+    HeaderCorner.Parent = Header
     
     local Title = Instance.new("TextLabel")
     Title.Name = "Title"
@@ -64,8 +74,12 @@ function Neverlose:CreateWindow(name)
     CloseButton.TextSize = 14
     CloseButton.Parent = Header
     
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 6)
+    CloseCorner.Parent = CloseButton
+    
     CloseButton.MouseButton1Click:Connect(function()
-        ScreenGui:Destroy()
+        ToggleMenu()
     end)
     
     -- Tabs Container
@@ -77,6 +91,10 @@ function Neverlose:CreateWindow(name)
     TabsContainer.BorderSizePixel = 0
     TabsContainer.Parent = MainFrame
     
+    local TabsCorner = Instance.new("UICorner")
+    TabsCorner.CornerRadius = UDim.new(0, 8)
+    TabsCorner.Parent = TabsContainer
+    
     -- Content Container
     local ContentContainer = Instance.new("Frame")
     ContentContainer.Name = "ContentContainer"
@@ -85,6 +103,10 @@ function Neverlose:CreateWindow(name)
     ContentContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
     ContentContainer.BorderSizePixel = 0
     ContentContainer.Parent = MainFrame
+    
+    local ContentCorner = Instance.new("UICorner")
+    ContentCorner.CornerRadius = UDim.new(0, 8)
+    ContentCorner.Parent = ContentContainer
     
     local Tabs = {}
     local CurrentTab = nil
@@ -103,6 +125,10 @@ function Neverlose:CreateWindow(name)
         TabButton.Font = Enum.Font.Gotham
         TabButton.TextSize = 12
         TabButton.Parent = TabsContainer
+        
+        local TabCorner = Instance.new("UICorner")
+        TabCorner.CornerRadius = UDim.new(0, 6)
+        TabCorner.Parent = TabButton
         
         local TabContent = Instance.new("ScrollingFrame")
         TabContent.Name = name .. "Content"
@@ -151,6 +177,10 @@ function Neverlose:CreateWindow(name)
             SectionFrame.BorderSizePixel = 0
             SectionFrame.Parent = TabContent
             
+            local SectionCorner = Instance.new("UICorner")
+            SectionCorner.CornerRadius = UDim.new(0, 6)
+            SectionCorner.Parent = SectionFrame
+            
             local SectionLabel = Instance.new("TextLabel")
             SectionLabel.Name = "SectionLabel"
             SectionLabel.Size = UDim2.new(1, -10, 1, 0)
@@ -184,6 +214,10 @@ function Neverlose:CreateWindow(name)
                 ToggleButton.TextSize = 11
                 ToggleButton.Parent = ToggleFrame
                 
+                local ToggleCorner = Instance.new("UICorner")
+                ToggleCorner.CornerRadius = UDim.new(0, 4)
+                ToggleCorner.Parent = ToggleButton
+                
                 local ToggleIndicator = Instance.new("Frame")
                 ToggleIndicator.Name = "ToggleIndicator"
                 ToggleIndicator.Size = UDim2.new(0, 20, 0, 20)
@@ -191,6 +225,10 @@ function Neverlose:CreateWindow(name)
                 ToggleIndicator.BackgroundColor3 = default and Color3.fromRGB(60, 180, 80) or Color3.fromRGB(80, 80, 90)
                 ToggleIndicator.BorderSizePixel = 0
                 ToggleIndicator.Parent = ToggleFrame
+                
+                local IndicatorCorner = Instance.new("UICorner")
+                IndicatorCorner.CornerRadius = UDim.new(0, 4)
+                IndicatorCorner.Parent = ToggleIndicator
                 
                 local State = default
                 
@@ -239,12 +277,20 @@ function Neverlose:CreateWindow(name)
                 SliderBar.BorderSizePixel = 0
                 SliderBar.Parent = SliderFrame
                 
+                local BarCorner = Instance.new("UICorner")
+                BarCorner.CornerRadius = UDim.new(1, 0)
+                BarCorner.Parent = SliderBar
+                
                 local SliderFill = Instance.new("Frame")
                 SliderFill.Name = "SliderFill"
                 SliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
                 SliderFill.BackgroundColor3 = Color3.fromRGB(60, 100, 180)
                 SliderFill.BorderSizePixel = 0
                 SliderFill.Parent = SliderBar
+                
+                local FillCorner = Instance.new("UICorner")
+                FillCorner.CornerRadius = UDim.new(1, 0)
+                FillCorner.Parent = SliderFill
                 
                 local SliderButton = Instance.new("TextButton")
                 SliderButton.Name = "SliderButton"
@@ -254,6 +300,10 @@ function Neverlose:CreateWindow(name)
                 SliderButton.BorderSizePixel = 0
                 SliderButton.Text = ""
                 SliderButton.Parent = SliderBar
+                
+                local ButtonCorner = Instance.new("UICorner")
+                ButtonCorner.CornerRadius = UDim.new(1, 0)
+                ButtonCorner.Parent = SliderButton
                 
                 local Value = default
                 local Dragging = false
@@ -326,6 +376,9 @@ function Neverlose:CreateWindow(name)
         end
     end)
     
+    Neverlose.MainFrame = MainFrame
+    Neverlose.ScreenGui = ScreenGui
+    
     return Neverlose
 end
 
@@ -361,85 +414,145 @@ local Cheats = {
 local ESPObjects = {}
 local Connections = {}
 
+-- Menu Toggle Variables
+local MenuVisible = false
+local NeverloseUI = nil
+
 -- Initialize UI
-local Window = Neverlose:CreateWindow("Neverlose Roblox")
+local function InitializeUI()
+    NeverloseUI = Neverlose:CreateWindow("Neverlose Roblox")
+    
+    -- Rage Tab
+    local RageTab = NeverloseUI:CreateTab("Rage")
+    local AimSection = RageTab:CreateSection("Aimbot")
 
--- Rage Tab
-local RageTab = Window:CreateTab("Rage")
-local AimSection = RageTab:CreateSection("Aimbot")
+    local SilentAimToggle = AimSection:CreateToggle("Silent Aim", false, function(state)
+        Cheats.SilentAim.Enabled = state
+    end)
 
-local SilentAimToggle = AimSection:CreateToggle("Silent Aim", false, function(state)
-    Cheats.SilentAim.Enabled = state
-end)
+    local TeamCheckToggle = AimSection:CreateToggle("Team Check", true, function(state)
+        Cheats.SilentAim.TeamCheck = state
+    end)
 
-local TeamCheckToggle = AimSection:CreateToggle("Team Check", true, function(state)
-    Cheats.SilentAim.TeamCheck = state
-end)
+    local WallCheckToggle = AimSection:CreateToggle("Wall Check", true, function(state)
+        Cheats.SilentAim.WallCheck = state
+    end)
 
-local WallCheckToggle = AimSection:CreateToggle("Wall Check", true, function(state)
-    Cheats.SilentAim.WallCheck = state
-end)
+    local AutoShootToggle = AimSection:CreateToggle("Auto Shoot", true, function(state)
+        Cheats.SilentAim.AutoShoot = state
+    end)
 
-local AutoShootToggle = AimSection:CreateToggle("Auto Shoot", true, function(state)
-    Cheats.SilentAim.AutoShoot = state
-end)
+    local FOVSlider = AimSection:CreateSlider("FOV", 10, 300, 50, function(value)
+        Cheats.SilentAim.FOV = value
+    end)
 
-local FOVSlider = AimSection:CreateSlider("FOV", 10, 300, 50, function(value)
-    Cheats.SilentAim.FOV = value
-end)
+    -- Movement Tab
+    local MovementTab = NeverloseUI:CreateTab("Movement")
+    local SpeedSection = MovementTab:CreateSection("Speed")
 
--- Movement Tab
-local MovementTab = Window:CreateTab("Movement")
-local SpeedSection = MovementTab:CreateSection("Speed")
+    local SpeedToggle = SpeedSection:CreateToggle("Speed Hack", false, function(state)
+        Cheats.Movement.Speed = state
+    end)
 
-local SpeedToggle = SpeedSection:CreateToggle("Speed Hack", false, function(state)
-    Cheats.Movement.Speed = state
-end)
+    local SpeedSlider = SpeedSection:CreateSlider("Speed Value", 10, 100, 25, function(value)
+        Cheats.Movement.SpeedValue = value
+    end)
 
-local SpeedSlider = SpeedSection:CreateSlider("Speed Value", 10, 100, 25, function(value)
-    Cheats.Movement.SpeedValue = value
-end)
+    local BunnyToggle = SpeedSection:CreateToggle("Bunny Hop", false, function(state)
+        Cheats.Movement.BunnyHop = state
+        ToggleBunnyHop()
+    end)
 
-local BunnyToggle = SpeedSection:CreateToggle("Bunny Hop", false, function(state)
-    Cheats.Movement.BunnyHop = state
-end)
+    -- Visuals Tab
+    local VisualsTab = NeverloseUI:CreateTab("Visuals")
+    local ESPSection = VisualsTab:CreateSection("ESP")
 
--- Visuals Tab
-local VisualsTab = Window:CreateTab("Visuals")
-local ESPSection = VisualsTab:CreateSection("ESP")
+    local ESPToggle = ESPSection:CreateToggle("ESP", false, function(state)
+        Cheats.ESP.Enabled = state
+        if state then
+            CreateESP()
+        else
+            ClearESP()
+        end
+    end)
 
-local ESPToggle = ESPSection:CreateToggle("ESP", false, function(state)
-    Cheats.ESP.Enabled = state
-    if state then
-        CreateESP()
-    else
-        ClearESP()
+    local BoxToggle = ESPSection:CreateToggle("Box ESP", true, function(state)
+        Cheats.ESP.Box = state
+        if not state then
+            ClearESP()
+            if Cheats.ESP.Enabled then
+                CreateESP()
+            end
+        end
+    end)
+
+    local SkeletonToggle = ESPSection:CreateToggle("Skeleton", true, function(state)
+        Cheats.ESP.Skeleton = state
+        if not state then
+            ClearESP()
+            if Cheats.ESP.Enabled then
+                CreateESP()
+            end
+        end
+    end)
+
+    local NamesToggle = ESPSection:CreateToggle("Names", true, function(state)
+        Cheats.ESP.Names = state
+        if not state then
+            ClearESP()
+            if Cheats.ESP.Enabled then
+                CreateESP()
+            end
+        end
+    end)
+
+    local DistanceToggle = ESPSection:CreateToggle("Distance", true, function(state)
+        Cheats.ESP.Distance = state
+        if not state then
+            ClearESP()
+            if Cheats.ESP.Enabled then
+                CreateESP()
+            end
+        end
+    end)
+
+    -- Anti-Aim Tab
+    local AATab = NeverloseUI:CreateTab("Anti-Aim")
+    local AASection = AATab:CreateSection("Anti-Aim")
+
+    local AAToggle = AASection:CreateToggle("Anti-Aim", false, function(state)
+        Cheats.AntiAim.Enabled = state
+    end)
+end
+
+-- Menu Toggle Function
+local function ToggleMenu()
+    MenuVisible = not MenuVisible
+    
+    if NeverloseUI and NeverloseUI.MainFrame then
+        NeverloseUI.MainFrame.Visible = MenuVisible
+        
+        if MenuVisible then
+            -- Smooth show animation
+            NeverloseUI.MainFrame.Position = UDim2.new(0.5, -300, 0.5, -225)
+        else
+            -- Smooth hide animation
+            NeverloseUI.MainFrame.Position = UDim2.new(0.5, -300, 0.5, -225)
+        end
     end
-end)
+end
 
-local BoxToggle = ESPSection:CreateToggle("Box ESP", true, function(state)
-    Cheats.ESP.Box = state
-end)
-
-local SkeletonToggle = ESPSection:CreateToggle("Skeleton", true, function(state)
-    Cheats.ESP.Skeleton = state
-end)
-
-local NamesToggle = ESPSection:CreateToggle("Names", true, function(state)
-    Cheats.ESP.Names = state
-end)
-
-local DistanceToggle = ESPSection:CreateToggle("Distance", true, function(state)
-    Cheats.ESP.Distance = state
-end)
-
--- Anti-Aim Tab
-local AATab = Window:CreateTab("Anti-Aim")
-local AASection = AATab:CreateSection("Anti-Aim")
-
-local AAToggle = AASection:CreateToggle("Anti-Aim", false, function(state)
-    Cheats.AntiAim.Enabled = state
-end)
+-- Insert Key Bind
+local InsertConnection
+local function SetupInsertBind()
+    InsertConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
+        if input.KeyCode == Enum.KeyCode.Insert then
+            ToggleMenu()
+        end
+    end)
+end
 
 -- ESP Functions
 function CreateESP()
@@ -729,11 +842,6 @@ local function SilentAim()
                 remote:FireServer("MouseClick", targetHead.Position)
             end
         end
-        
-        -- Alternative shooting method
-        virtualInput:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-        task.wait(0.1)
-        virtualInput:SendMouseButtonEvent(0, 0, 0, false, game, 1)
     end
 end
 
@@ -814,42 +922,4 @@ local function UpdateESPDistances()
             
             if root then
                 local distance = (localRoot.Position - root.Position).Magnitude
-                local distanceText = tostring(math.floor(distance)) .. " studs"
-                
-                local distanceLabel = esp.Distance:FindFirstChildOfClass("TextLabel")
-                if distanceLabel then
-                    distanceLabel.Text = distanceText
-                end
-            end
-        end
-    end
-end
-
--- Virtual Input for Auto Shoot
-local virtualInput = game:GetService("VirtualInputManager")
-
--- Main Loops
-RunService.Heartbeat:Connect(function()
-    ApplySpeed()
-    ApplyAntiAim()
-    SilentAim()
-    UpdateESPDistances()
-end)
-
--- Bunny Hop Toggle
-BunnyToggle.Button.MouseButton1Click:Connect(function()
-    Cheats.Movement.BunnyHop = not Cheats.Movement.BunnyHop
-    ToggleBunnyHop()
-end)
-
--- Initialize Bunny Hop
-ToggleBunnyHop()
-
-print("Neverlose Roblox Cheat Loaded!")
-print("Features: Silent Aim, Speed Hack, Bunny Hop, Anti-Aim, ESP")
-print("Press Insert to toggle menu (if implemented)")
-
--- Auto-ESP when enabled
-if Cheats.ESP.Enabled then
-    CreateESP()
-end
+                local distanceText = tostring(math.floor(distance
