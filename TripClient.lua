@@ -1,5 +1,5 @@
 -- Neverlose.lua Style Cheat Menu for Roblox
--- With Anti-Recoil & Anti-Spread
+-- Silent Aim with Crosshair Priority
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -18,7 +18,7 @@ local Cheats = {
         WallCheck = true,
         AutoShoot = false,
         HitPart = "Head",
-        UseMouseHit = true
+        Priority = "Crosshair" -- Новый параметр приоритета
     },
     Movement = {
         Speed = false,
@@ -29,28 +29,8 @@ local Cheats = {
         Enabled = false,
         Box = true,
         Skeleton = true
-    },
-    -- НОВЫЕ ФУНКЦИИ АНТИ-ОТДАЧИ И АНТИ-РАЗБРОСА
-    AntiRecoil = {
-        Enabled = false,
-        Strength = 50, -- Сила компенсации (1-100)
-        VerticalReduction = 80, -- Уменьшение вертикальной отдачи (%)
-        HorizontalReduction = 90 -- Уменьшение горизонтальной отдачи (%)
-    },
-    AntiSpread = {
-        Enabled = false,
-        Accuracy = 95, -- Точность стрельбы (%)
-        FirstShotAccuracy = 100, -- Точность первого выстрела
-        NoBloom = true -- Убрать разброс при стрельбе очередями
     }
 }
-
--- Переменные для анти-отдачи
-local LastCameraCFrame = nil
-local RecoilCompensation = Vector3.zero
-local IsFiring = false
-local ShotCount = 0
-local LastShotTime = 0
 
 -- Menu Variables
 local ScreenGui = nil
@@ -356,47 +336,11 @@ local function CreateGUI()
 
     local AutoShootToggle = AimSection:CreateToggle("Auto Shoot", false, function(state)
         Cheats.SilentAim.AutoShoot = state
+        ToggleAutoShoot()
     end)
 
     local FOVSlider = AimSection:CreateSlider("FOV", 10, 300, 50, function(value)
         Cheats.SilentAim.FOV = value
-    end)
-
-    -- НОВАЯ СЕКЦИЯ: Анти-отдача и анти-разброс
-    local RecoilSection = RageTab:CreateSection("Recoil & Spread")
-
-    local AntiRecoilToggle = RecoilSection:CreateToggle("Anti-Recoil", false, function(state)
-        Cheats.AntiRecoil.Enabled = state
-        print("Anti-Recoil:", state)
-    end)
-
-    local RecoilStrengthSlider = RecoilSection:CreateSlider("Recoil Strength", 1, 100, 50, function(value)
-        Cheats.AntiRecoil.Strength = value
-    end)
-
-    local VerticalRecoilSlider = RecoilSection:CreateSlider("Vertical Reduction", 0, 100, 80, function(value)
-        Cheats.AntiRecoil.VerticalReduction = value
-    end)
-
-    local HorizontalRecoilSlider = RecoilSection:CreateSlider("Horizontal Reduction", 0, 100, 90, function(value)
-        Cheats.AntiRecoil.HorizontalReduction = value
-    end)
-
-    local AntiSpreadToggle = RecoilSection:CreateToggle("Anti-Spread", false, function(state)
-        Cheats.AntiSpread.Enabled = state
-        print("Anti-Spread:", state)
-    end)
-
-    local AccuracySlider = RecoilSection:CreateSlider("Accuracy", 50, 100, 95, function(value)
-        Cheats.AntiSpread.Accuracy = value
-    end)
-
-    local FirstShotSlider = RecoilSection:CreateSlider("First Shot Accuracy", 80, 100, 100, function(value)
-        Cheats.AntiSpread.FirstShotAccuracy = value
-    end)
-
-    local NoBloomToggle = RecoilSection:CreateToggle("No Bloom", true, function(state)
-        Cheats.AntiSpread.NoBloom = state
     end)
 
     -- Movement Tab
@@ -478,141 +422,137 @@ local function SetupInsertBind()
     end)
 end
 
--- НОВЫЕ ФУНКЦИИ АНТИ-ОТДАЧИ И АНТИ-РАЗБРОСА
+-- Game Functions
+local function IsTeamMate(player)
+    if not Cheats.SilentAim.TeamCheck then return false end
+    return LocalPlayer.Team and player.Team and LocalPlayer.Team == player.Team
+end
 
--- Функция для определения, стреляет ли игрок
-local function IsPlayerShooting()
-    local character = LocalPlayer.Character
-    if not character then return false end
+local function IsVisible(target, origin)
+    if not Cheats.SilentAim.WallCheck then return true end
     
-    local tool = character:FindFirstChildOfClass("Tool")
-    if not tool then return false end
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    params.FilterDescendantsInstances = {LocalPlayer.Character, target.Parent}
     
-    -- Проверяем анимации или звуки выстрела
-    for _, sound in pairs(tool:GetDescendants()) do
-        if sound:IsA("Sound") and sound.Playing then
-            if string.find(sound.Name:lower(), "fire") or string.find(sound.Name:lower(), "shoot") then
-                return true
+    local direction = (target.Position - origin).Unit
+    local result = Workspace:Raycast(origin, direction * 1000, params)
+    
+    return result == nil or result.Instance:IsDescendantOf(target.Parent)
+end
+
+-- НОВАЯ ФУНКЦИЯ: Получение цели с приоритетом по прицелу
+local function GetClosestPlayer()
+    if not Cheats.SilentAim.Enabled then return nil end
+    
+    local closestPlayer = nil
+    local closestDistance = Cheats.SilentAim.FOV
+    
+    local camera = Workspace.CurrentCamera
+    local mousePos = Vector2.new(Mouse.X, Mouse.Y)
+    local cameraPos = camera.CFrame.Position
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and not IsTeamMate(player) then
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            local head = player.Character:FindFirstChild("Head")
+            
+            if humanoid and humanoid.Health > 0 and head then
+                -- Получаем позицию игрока на экране
+                local screenPoint, onScreen = camera:WorldToViewportPoint(head.Position)
+                
+                if onScreen then
+                    -- Вычисляем расстояние от прицела до игрока на экране
+                    local screenDistance = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePos).Magnitude
+                    
+                    -- ПРИОРИТЕТ ПО ПРИЦЕЛУ: выбираем игрока ближайшего к прицелу
+                    if screenDistance < closestDistance and IsVisible(head, cameraPos) then
+                        closestDistance = screenDistance
+                        closestPlayer = player
+                    end
+                end
             end
         end
     end
     
-    -- Проверяем частицы выстрела
-    for _, particle in pairs(tool:GetDescendants()) do
-        if particle:IsA("ParticleEmitter") and particle.Enabled then
-            return true
-        end
-    end
-    
-    return false
+    return closestPlayer
 end
 
--- Функция компенсации отдачи
-local function ApplyAntiRecoil()
-    if not Cheats.AntiRecoil.Enabled then return end
+-- REAL Silent Aim (без движения камеры)
+local function GetClosestTarget()
+    if not Cheats.SilentAim.Enabled then return nil end
     
-    local character = LocalPlayer.Character
-    if not character then return end
+    local targetPlayer = GetClosestPlayer()
+    if not targetPlayer or not targetPlayer.Character then return nil end
     
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
+    local targetPart = targetPlayer.Character:FindFirstChild(Cheats.SilentAim.HitPart)
+    if not targetPart then return nil end
     
-    -- Определяем, стреляет ли игрок
-    local shooting = IsPlayerShooting()
-    
-    if shooting then
-        if not IsFiring then
-            -- Начало стрельбы
-            IsFiring = true
-            ShotCount = 0
-            LastCameraCFrame = Camera.CFrame
-        end
-        
-        ShotCount = ShotCount + 1
-        
-        -- Вычисляем компенсацию отдачи на основе настроек
-        local verticalCompensation = Cheats.AntiRecoil.VerticalReduction / 100
-        local horizontalCompensation = Cheats.AntiRecoil.HorizontalReduction / 100
-        local strength = Cheats.AntiRecoil.Strength / 100
-        
-        -- Симуляция отдачи (зависит от количества выстрелов)
-        local simulatedRecoil = Vector3.new(
-            (math.random() - 0.5) * 0.1 * (1 - horizontalCompensation) * strength,
-            -math.random() * 0.15 * (1 - verticalCompensation) * strength,
-            0
-        ) * (ShotCount * 0.1 + 1)
-        
-        -- Применяем компенсацию к камере
-        RecoilCompensation = RecoilCompensation + simulatedRecoil
-        
-    else
-        -- Конец стрельбы, сбрасываем состояние
-        IsFiring = false
-        ShotCount = 0
-        
-        -- Плавно возвращаем камеру в исходное положение
-        if RecoilCompensation.Magnitude > 0.01 then
-            RecoilCompensation = RecoilCompensation:Lerp(Vector3.zero, 0.3)
-        else
-            RecoilCompensation = Vector3.zero
-        end
-    end
-    
-    -- Применяем компенсацию к камере
-    if RecoilCompensation.Magnitude > 0 then
-        Camera.CFrame = Camera.CFrame * CFrame.new(RecoilCompensation)
-    end
+    return targetPart
 end
 
--- Функция для уменьшения разброса
-local function ApplyAntiSpread()
-    if not Cheats.AntiSpread.Enabled then return end
-    
-    local character = LocalPlayer.Character
-    if not character then return end
-    
-    local tool = character:FindFirstChildOfClass("Tool")
-    if not tool then return end
-    
-    -- Уменьшаем разброс через изменение свойств оружия
-    for _, part in pairs(tool:GetDescendants()) do
-        -- Уменьшаем разброс у ParticleEmitter (эффекты выстрела)
-        if part:IsA("ParticleEmitter") and Cheats.AntiSpread.NoBloom then
-            part.SpreadAngle = NumberRange.new(0, math.max(0, part.SpreadAngle.Max * (1 - Cheats.AntiSpread.Accuracy / 100)))
-        end
-        
-        -- Уменьшаем разброс у Beam (лучи)
-        if part:IsA("Beam") then
-            part.Width0 = math.max(0.01, part.Width0 * (Cheats.AntiSpread.Accuracy / 100))
-            part.Width1 = math.max(0.01, part.Width1 * (Cheats.AntiSpread.Accuracy / 100))
-        end
+-- Визуализация FOV (опционально)
+local FOVCircle
+local function CreateFOVCircle()
+    if FOVCircle then
+        FOVCircle:Remove()
     end
+    
+    FOVCircle = Drawing.new("Circle")
+    FOVCircle.Visible = Cheats.SilentAim.Enabled
+    FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+    FOVCircle.Thickness = 1
+    FOVCircle.NumSides = 100
+    FOVCircle.Radius = Cheats.SilentAim.FOV
+    FOVCircle.Filled = false
+    FOVCircle.Position = Vector2.new(Mouse.X, Mouse.Y + 36)
+    
+    return FOVCircle
 end
 
--- Перехват выстрелов для применения анти-разброса
-local function HookWeaponSpread()
+-- Hook для изменения позиции выстрела
+local OriginalMouseHit
+local function SetupSilentAimHook()
+    -- Сохраняем оригинальную функцию мыши
+    if not OriginalMouseHit then
+        OriginalMouseHit = Mouse.Hit
+    end
+    
+    -- Перехватываем Mouse.Hit
+    local __index
+    __index = hookmetamethod(game, "__index", function(self, key)
+        if self == Mouse and key == "Hit" and Cheats.SilentAim.Enabled then
+            local target = GetClosestTarget()
+            if target then
+                -- Возвращаем позицию цели вместо реальной позиции мыши
+                return CFrame.new(target.Position)
+            end
+        end
+        return __index(self, key)
+    end)
+end
+
+-- Альтернативный метод через перехват RemoteEvents
+local function HookRemoteEvents()
     local function HookRemote(remote)
         if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
             local oldFireServer = remote.FireServer
             remote.FireServer = function(self, ...)
                 local args = {...}
                 
-                if Cheats.AntiSpread.Enabled and string.find(tostring(self.Parent), "Tool") then
-                    -- Применяем анти-разброс к аргументам выстрела
-                    for i, arg in ipairs(args) do
-                        if typeof(arg) == "Vector3" then
-                            -- Увеличиваем точность первого выстрела
-                            if ShotCount == 0 then
-                                local accuracyMod = Cheats.AntiSpread.FirstShotAccuracy / 100
-                                args[i] = args[i] * accuracyMod
-                            else
-                                local accuracyMod = Cheats.AntiSpread.Accuracy / 100
-                                local randomOffset = Vector3.new(
-                                    (math.random() - 0.5) * (1 - accuracyMod) * 0.1,
-                                    (math.random() - 0.5) * (1 - accuracyMod) * 0.1,
-                                    (math.random() - 0.5) * (1 - accuracyMod) * 0.1
-                                )
-                                args[i] = args[i] + randomOffset
+                -- Проверяем, связан ли Remote с оружием
+                if Cheats.SilentAim.Enabled and string.find(tostring(self.Parent), "Tool") then
+                    local target = GetClosestTarget()
+                    if target then
+                        -- Заменяем позицию выстрела на позицию цели
+                        for i, arg in ipairs(args) do
+                            if typeof(arg) == "Vector3" then
+                                args[i] = target.Position
+                            elseif typeof(arg) == "CFrame" then
+                                args[i] = CFrame.new(target.Position)
+                            elseif typeof(arg) == "string" and arg == "MouseClick" then
+                                -- Для некоторых игр
+                                args[i + 1] = target.Position
                             end
                         end
                     end
@@ -639,7 +579,68 @@ local function HookWeaponSpread()
     end)
 end
 
--- Остальные функции остаются без изменений...
+-- Speed Hack
+local function ApplySpeed()
+    if not Cheats.Movement.Speed then return end
+    
+    local character = LocalPlayer.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = Cheats.Movement.SpeedValue
+        end
+    end
+end
+
+-- Bunny Hop
+local BunnyHopConnection
+local function ToggleBunnyHop()
+    if BunnyHopConnection then
+        BunnyHopConnection:Disconnect()
+        BunnyHopConnection = nil
+    end
+    
+    if Cheats.Movement.BunnyHop then
+        BunnyHopConnection = RunService.Heartbeat:Connect(function()
+            local character = LocalPlayer.Character
+            if character then
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                if humanoid and humanoid:GetState() == Enum.HumanoidStateType.Running then
+                    humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+            end
+        end)
+    end
+end
+
+-- Auto Shoot
+local AutoShootConnection
+local function ToggleAutoShoot()
+    if AutoShootConnection then
+        AutoShootConnection:Disconnect()
+        AutoShootConnection = nil
+    end
+    
+    if Cheats.SilentAim.AutoShoot then
+        AutoShootConnection = RunService.Heartbeat:Connect(function()
+            if Cheats.SilentAim.Enabled then
+                local target = GetClosestTarget()
+                if target then
+                    -- Симулируем нажатие мыши
+                    local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                    if tool then
+                        local remote = tool:FindFirstChildOfClass("RemoteEvent") or tool:FindFirstChildOfClass("RemoteFunction")
+                        if remote then
+                            remote:FireServer("MouseButton1", "Down", target.Position)
+                            task.wait(0.05)
+                            remote:FireServer("MouseButton1", "Up", target.Position)
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end
 
 -- Initialize everything
 local function Initialize()
@@ -654,18 +655,26 @@ local function Initialize()
     -- Setup Silent Aim hooks
     SetupSilentAimHook()
     HookRemoteEvents()
-    HookWeaponSpread() -- НОВЫЙ ХУК ДЛЯ АНТИ-РАЗБРОСА
     
-    -- Start main loop
+    -- Create FOV circle
+    CreateFOVCircle()
+    
+    -- Update FOV circle
     RunService.Heartbeat:Connect(function()
         ApplySpeed()
-        ApplyAntiRecoil() -- НОВАЯ ФУНКЦИЯ АНТИ-ОТДАЧИ
-        ApplyAntiSpread() -- НОВАЯ ФУНКЦИЯ АНТИ-РАЗБРОСА
+        
+        -- Обновляем позицию FOV круга
+        if FOVCircle then
+            FOVCircle.Visible = Cheats.SilentAim.Enabled
+            FOVCircle.Radius = Cheats.SilentAim.FOV
+            FOVCircle.Position = Vector2.new(Mouse.X, Mouse.Y + 36)
+        end
     end)
     
     print("Neverlose Cheat Loaded Successfully!")
     print("Press INSERT to open/close menu")
-    print("New Features: Anti-Recoil & Anti-Spread")
+    print("Silent Aim Priority: CROSSHAIR (closest to crosshair)")
+    print("FOV Circle shows targeting area")
 end
 
 -- Start the cheat
