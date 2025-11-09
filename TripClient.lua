@@ -1,4 +1,4 @@
--- Gothbreach Cheat Menu v2.0
+-- Gothbreach Cheat Menu v2.2
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -12,6 +12,7 @@ local CheatSettings = {
         TeamCheck = true,
         WallCheck = true,
         FOV = 50,
+        ShowFOV = true,
         Smoothness = 0.1,
         AimPart = "Head",
         Keybind = "RightShift"
@@ -21,25 +22,61 @@ local CheatSettings = {
         Enabled = false,
         TeamCheck = true,
         Skeletons = true,
-        Boxes = false,
+        Boxes = true,
         Names = true,
         Distance = true,
         Keybind = "Insert"
-    },
-    
-    Visuals = {
-        FOV = 120,
-        ThirdPerson = false
     }
 }
 
 -- Хранилище
 local ESPObjects = {}
 local Connections = {}
+local FOVCircle
 
--- UI библиотека Kavo
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.CreateLib("Gothbreach Cheat", "Sentinel")
+-- Создание FOV круга
+function createFOVCircle()
+    if FOVCircle then FOVCircle:Remove() end
+    
+    local circle = Drawing.new("Circle")
+    circle.Visible = CheatSettings.Aimbot.ShowFOV
+    circle.Thickness = 1
+    circle.Color = Color3.fromRGB(255, 255, 255)
+    circle.Transparency = 1
+    circle.Filled = false
+    circle.Radius = CheatSettings.Aimbot.FOV
+    circle.Position = Vector2.new(Mouse.X, Mouse.Y)
+    
+    FOVCircle = circle
+    return circle
+end
+
+-- Обновление FOV круга
+function updateFOVCircle()
+    if not FOVCircle then
+        createFOVCircle()
+    end
+    
+    FOVCircle.Visible = CheatSettings.Aimbot.ShowFOV and CheatSettings.Aimbot.Enabled
+    FOVCircle.Radius = CheatSettings.Aimbot.FOV
+    FOVCircle.Position = Vector2.new(Mouse.X, Mouse.Y)
+    
+    if CheatSettings.Aimbot.Enabled then
+        FOVCircle.Color = Color3.fromRGB(0, 255, 0)
+    else
+        FOVCircle.Color = Color3.fromRGB(255, 0, 0)
+    end
+end
+
+-- Проверка жив ли игрок
+function isPlayerAlive(player)
+    if not player.Character then return false end
+    
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return false end
+    
+    return humanoid.Health > 0
+end
 
 -- Функции проверки
 function isEnemy(player)
@@ -77,9 +114,9 @@ function findTarget()
     local closestDistance = CheatSettings.Aimbot.FOV
     
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(CheatSettings.Aimbot.AimPart) then
-            if isEnemy(player) then
-                local targetPart = player.Character[CheatSettings.Aimbot.AimPart]
+        if player ~= LocalPlayer and player.Character and isPlayerAlive(player) then
+            local targetPart = player.Character:FindFirstChild(CheatSettings.Aimbot.AimPart)
+            if targetPart and isEnemy(player) then
                 local screenPoint, onScreen = workspace.CurrentCamera:WorldToViewportPoint(targetPart.Position)
                 
                 if onScreen and isVisible(targetPart) then
@@ -103,8 +140,14 @@ function startAimbot()
     if Connections.Aimbot then Connections.Aimbot:Disconnect() end
     
     Connections.Aimbot = RunService.RenderStepped:Connect(function()
-        if not CheatSettings.Aimbot.Enabled then return end
-        if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Head") then return end
+        if not CheatSettings.Aimbot.Enabled then 
+            updateFOVCircle()
+            return 
+        end
+        
+        updateFOVCircle()
+        
+        if not LocalPlayer.Character or not isPlayerAlive(LocalPlayer) then return end
         
         local target = findTarget()
         if target then
@@ -118,114 +161,218 @@ function startAimbot()
     end)
 end
 
--- ESP скелетов
-function createSkeleton(player)
-    if ESPObjects[player] then return end
+-- ESP системы
+function createESP(player)
+    if ESPObjects[player] then 
+        -- Очистка старого ESP
+        clearESP(player)
+    end
     
     local character = player.Character
     if not character then return end
     
-    local bones = {
-        "Head", "UpperTorso", "LowerTorso",
-        "LeftUpperArm", "LeftLowerArm", "LeftHand",
-        "RightUpperArm", "RightLowerArm", "RightHand",
-        "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
-        "RightUpperLeg", "RightLowerLeg", "RightFoot"
+    local espData = {
+        Box = nil,
+        Name = nil,
+        Distance = nil,
+        SkeletonLines = {},
+        Connections = {}
     }
     
-    local connections = {}
-    local parts = {}
-    
-    -- Создание линий между костями
-    local function createLine(fromPart, toPart)
-        local line = Instance.new("BoxHandleAdornment")
-        line.Name = "SkeletonLine"
-        line.Adornee = fromPart
-        line.Size = Vector3.new(0.1, 0.1, (fromPart.Position - toPart.Position).Magnitude)
-        line.CFrame = CFrame.lookAt(fromPart.Position, toPart.Position) * CFrame.new(0, 0, -line.Size.Z/2)
-        line.Color3 = Color3.fromRGB(255, 0, 0)
-        line.Transparency = 0.3
-        line.AlwaysOnTop = true
-        line.ZIndex = 2
-        line.Parent = fromPart
-        
-        return line
+    -- Бокс ESP
+    if CheatSettings.ESP.Boxes then
+        local box = Drawing.new("Square")
+        box.Visible = false
+        box.Thickness = 2
+        box.Color = Color3.fromRGB(255, 0, 0)
+        box.Filled = false
+        espData.Box = box
     end
     
-    -- Соединения костей
-    local connectionsMap = {
-        {"Head", "UpperTorso"},
-        {"UpperTorso", "LowerTorso"},
-        {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
-        {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
-        {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
-        {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"}
-    }
+    -- Имя игрока
+    if CheatSettings.ESP.Names then
+        local name = Drawing.new("Text")
+        name.Visible = false
+        name.Color = Color3.fromRGB(255, 255, 255)
+        name.Size = 13
+        name.Text = player.Name
+        name.Outline = true
+        name.OutlineColor = Color3.fromRGB(0, 0, 0)
+        name.Center = true
+        espData.Name = name
+    end
     
-    local function updateSkeleton()
-        if not character or not character.Parent then
-            -- Очистка при смерти игрока
-            for _, part in pairs(parts) do
-                part:Destroy()
-            end
-            for _, conn in pairs(connections) do
-                conn:Disconnect()
-            end
-            ESPObjects[player] = nil
+    -- Дистанция
+    if CheatSettings.ESP.Distance then
+        local distance = Drawing.new("Text")
+        distance.Visible = false
+        distance.Color = Color3.fromRGB(255, 255, 255)
+        distance.Size = 12
+        distance.Outline = true
+        distance.OutlineColor = Color3.fromRGB(0, 0, 0)
+        distance.Center = true
+        espData.Distance = distance
+    end
+    
+    -- Скелет
+    if CheatSettings.ESP.Skeletons then
+        local skeletonParts = {
+            "Head", "UpperTorso", "LowerTorso",
+            "LeftUpperArm", "LeftLowerArm", "LeftHand",
+            "RightUpperArm", "RightLowerArm", "RightHand", 
+            "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
+            "RightUpperLeg", "RightLowerLeg", "RightFoot"
+        }
+        
+        local connectionsMap = {
+            {"Head", "UpperTorso"},
+            {"UpperTorso", "LowerTorso"},
+            {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
+            {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
+            {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
+            {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"}
+        }
+        
+        -- Создание линий скелета
+        for _, connection in pairs(connectionsMap) do
+            local line = Drawing.new("Line")
+            line.Visible = false
+            line.Thickness = 2
+            line.Color = Color3.fromRGB(255, 0, 0)
+            espData.SkeletonLines[connection[1] .. "_" .. connection[2]] = line
+        end
+    end
+    
+    -- Функция обновления ESP
+    local function updateESP()
+        if not character or not character.Parent or not isPlayerAlive(player) then
+            clearESP(player)
             return
         end
         
-        -- Обновление линий
-        for _, connection in pairs(connectionsMap) do
-            local fromPart = character:FindFirstChild(connection[1])
-            local toPart = character:FindFirstChild(connection[2])
-            
-            if fromPart and toPart then
-                local lineName = connection[1] .. "_" .. connection[2]
-                if not parts[lineName] then
-                    parts[lineName] = createLine(fromPart, toPart)
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        if not rootPart then return end
+        
+        local rootPos, rootVisible = workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
+        if not rootVisible then
+            -- Скрыть ESP если игрок не в поле зрения
+            if espData.Box then espData.Box.Visible = false end
+            if espData.Name then espData.Name.Visible = false end
+            if espData.Distance then espData.Distance.Visible = false end
+            for _, line in pairs(espData.SkeletonLines) do
+                line.Visible = false
+            end
+            return
+        end
+        
+        -- Обновление бокса
+        if espData.Box then
+            local head = character:FindFirstChild("Head")
+            if head then
+                local headPos = workspace.CurrentCamera:WorldToViewportPoint(head.Position)
+                local feetPos = workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position + Vector3.new(0, -3, 0))
+                
+                local height = math.abs(feetPos.Y - headPos.Y)
+                local width = height / 2
+                
+                espData.Box.Size = Vector2.new(width, height)
+                espData.Box.Position = Vector2.new(headPos.X - width/2, headPos.Y)
+                espData.Box.Visible = true
+            end
+        end
+        
+        -- Обновление имени
+        if espData.Name then
+            local head = character:FindFirstChild("Head")
+            if head then
+                local headPos = workspace.CurrentCamera:WorldToViewportPoint(head.Position)
+                espData.Name.Position = Vector2.new(headPos.X, headPos.Y - 40)
+                espData.Name.Visible = true
+            end
+        end
+        
+        -- Обновление дистанции
+        if espData.Distance and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local head = character:FindFirstChild("Head")
+            if head then
+                local headPos = workspace.CurrentCamera:WorldToViewportPoint(head.Position)
+                local distance = (rootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                espData.Distance.Text = math.floor(distance) .. " studs"
+                espData.Distance.Position = Vector2.new(headPos.X, headPos.Y - 55)
+                espData.Distance.Visible = true
+            end
+        end
+        
+        -- Обновление скелета
+        if CheatSettings.ESP.Skeletons then
+            for connection, line in pairs(espData.SkeletonLines) do
+                local parts = connection:split("_")
+                local fromPart = character:FindFirstChild(parts[1])
+                local toPart = character:FindFirstChild(parts[2])
+                
+                if fromPart and toPart then
+                    local fromPos, fromVisible = workspace.CurrentCamera:WorldToViewportPoint(fromPart.Position)
+                    local toPos, toVisible = workspace.CurrentCamera:WorldToViewportPoint(toPart.Position)
+                    
+                    if fromVisible and toVisible then
+                        line.From = Vector2.new(fromPos.X, fromPos.Y)
+                        line.To = Vector2.new(toPos.X, toPos.Y)
+                        line.Visible = true
+                    else
+                        line.Visible = false
+                    end
                 else
-                    parts[lineName].Size = Vector3.new(0.1, 0.1, (fromPart.Position - toPart.Position).Magnitude)
-                    parts[lineName].CFrame = CFrame.lookAt(fromPart.Position, toPart.Position) * CFrame.new(0, 0, -parts[lineName].Size.Z/2)
+                    line.Visible = false
                 end
             end
         end
     end
     
-    -- Обновление скелета
-    connections.update = RunService.RenderStepped:Connect(updateSkeleton)
-    ESPObjects[player] = {
-        connections = connections,
-        parts = parts
-    }
+    -- Запуск обновления ESP
+    espData.Connections.update = RunService.RenderStepped:Connect(updateESP)
+    ESPObjects[player] = espData
+end
+
+-- Очистка ESP
+function clearESP(player)
+    local espData = ESPObjects[player]
+    if not espData then return end
+    
+    -- Отключение соединений
+    for _, conn in pairs(espData.Connections) do
+        conn:Disconnect()
+    end
+    
+    -- Удаление Drawing объектов
+    if espData.Box then espData.Box:Remove() end
+    if espData.Name then espData.Name:Remove() end
+    if espData.Distance then espData.Distance:Remove() end
+    
+    for _, line in pairs(espData.SkeletonLines) do
+        line:Remove()
+    end
+    
+    ESPObjects[player] = nil
 end
 
 function startESP()
     -- Очистка старого ESP
-    for player, data in pairs(ESPObjects) do
-        for _, conn in pairs(data.connections) do
-            conn:Disconnect()
-        end
-        for _, part in pairs(data.parts) do
-            part:Destroy()
-        end
+    for player, _ in pairs(ESPObjects) do
+        clearESP(player)
     end
-    ESPObjects = {}
     
     if not CheatSettings.ESP.Enabled then return end
     
     -- Создание ESP для врагов
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and isEnemy(player) then
-            if CheatSettings.ESP.Skeletons then
-                createSkeleton(player)
-            end
+            createESP(player)
             
             -- Обработка появления персонажа
             player.CharacterAdded:Connect(function(character)
                 wait(1)
-                if CheatSettings.ESP.Skeletons and isEnemy(player) then
-                    createSkeleton(player)
+                if CheatSettings.ESP.Enabled and isEnemy(player) then
+                    createESP(player)
                 end
             end)
         end
@@ -235,8 +382,8 @@ function startESP()
     Players.PlayerAdded:Connect(function(player)
         player.CharacterAdded:Connect(function(character)
             wait(1)
-            if CheatSettings.ESP.Skeletons and isEnemy(player) then
-                createSkeleton(player)
+            if CheatSettings.ESP.Enabled and isEnemy(player) then
+                createESP(player)
             end
         end)
     end)
@@ -247,20 +394,21 @@ function setupBinds()
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
         
-        -- Аимбот
         if input.KeyCode == Enum.KeyCode[CheatSettings.Aimbot.Keybind] then
             CheatSettings.Aimbot.Enabled = not CheatSettings.Aimbot.Enabled
-            print("Aimbot: " .. (CheatSettings.Aimbot.Enabled and "ON" or "OFF"))
+            updateFOVCircle()
         end
         
-        -- ESP
         if input.KeyCode == Enum.KeyCode[CheatSettings.ESP.Keybind] then
             CheatSettings.ESP.Enabled = not CheatSettings.ESP.Enabled
             startESP()
-            print("ESP: " .. (CheatSettings.ESP.Enabled and "ON" or "OFF"))
         end
     end)
 end
+
+-- UI библиотека Kavo
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("Gothbreach Cheat", "Sentinel")
 
 -- Создание меню
 local AimbotTab = Window:NewTab("Aimbot")
@@ -268,11 +416,18 @@ local AimbotSection = AimbotTab:NewSection("Aimbot Settings")
 
 AimbotSection:NewToggle("Enable Aimbot", "Включить аимбот", function(state)
     CheatSettings.Aimbot.Enabled = state
+    updateFOVCircle()
     startAimbot()
+end)
+
+AimbotSection:NewToggle("Show FOV", "Показывать FOV круг", function(state)
+    CheatSettings.Aimbot.ShowFOV = state
+    updateFOVCircle()
 end)
 
 AimbotSection:NewSlider("FOV", "Поле зрения аимбота", 300, 10, function(value)
     CheatSettings.Aimbot.FOV = value
+    updateFOVCircle()
 end)
 
 AimbotSection:NewSlider("Smoothness", "Плавность аимбота", 100, 1, function(value)
@@ -285,7 +440,7 @@ end)
 
 AimbotSection:NewKeybind("Aimbot Key", "Клавиша аимбота", Enum.KeyCode.RightShift, function()
     CheatSettings.Aimbot.Enabled = not CheatSettings.Aimbot.Enabled
-    print("Aimbot: " .. (CheatSettings.Aimbot.Enabled and "ON" or "OFF"))
+    updateFOVCircle()
 end)
 
 local VisualsTab = Window:NewTab("Visuals")
@@ -301,6 +456,21 @@ ESPsection:NewToggle("Skeletons", "Показывать скелеты", functio
     startESP()
 end)
 
+ESPsection:NewToggle("Boxes", "Показывать боксы", function(state)
+    CheatSettings.ESP.Boxes = state
+    startESP()
+end)
+
+ESPsection:NewToggle("Names", "Показывать имена", function(state)
+    CheatSettings.ESP.Names = state
+    startESP()
+end)
+
+ESPsection:NewToggle("Distance", "Показывать дистанцию", function(state)
+    CheatSettings.ESP.Distance = state
+    startESP()
+end)
+
 ESPsection:NewToggle("Team Check", "Проверка команды", function(state)
     CheatSettings.ESP.TeamCheck = state
     CheatSettings.Aimbot.TeamCheck = state
@@ -310,7 +480,6 @@ end)
 ESPsection:NewKeybind("ESP Key", "Клавиша ESP", Enum.KeyCode.Insert, function()
     CheatSettings.ESP.Enabled = not CheatSettings.ESP.Enabled
     startESP()
-    print("ESP: " .. (CheatSettings.ESP.Enabled and "ON" or "OFF"))
 end)
 
 local SettingsTab = Window:NewTab("Settings")
@@ -321,11 +490,14 @@ BindSection:NewKeybind("UI Toggle", "Показать/скрыть меню", En
 end)
 
 -- Запуск
+createFOVCircle()
 setupBinds()
 startAimbot()
 startESP()
 
-print("🎯 Gothbreach Cheat loaded!")
+RunService.RenderStepped:Connect(updateFOVCircle)
+
+print("🎯 Gothbreach Cheat v2.2 loaded!")
 print("RightControl - Show/Hide Menu")
 print("RightShift - Toggle Aimbot") 
 print("Insert - Toggle ESP")
