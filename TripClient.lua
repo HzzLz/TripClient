@@ -1,4 +1,4 @@
--- Gothbreach ULTIMATE Cheat v5.0 (Internal)
+-- Gothbreach Premium Cheat v2.1 (Fixed GUI)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -6,455 +6,391 @@ local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- Используем внутренние функции через оффсеты
-local function InternalPrint(...)
-    -- Используем внутренний Print вместо warn/print
-    if _G.Offsets and _G.Signatures and _G.Signatures.Print then
-        _G.Signatures.Print(2, "Gothbreach: " .. table.concat({...}, " "))
-    else
-        warn("Gothbreach: " .. table.concat({...}, " "))
-    end
-end
-
--- Настройки с обходом античита
+-- Настройки
 local Settings = {
-    Aimbot = {
-        Enabled = false, 
-        FOV = 80,
-        Smoothness = 0.1,
-        ShowFOV = true,
-        WallCheck = true,
-        TeamCheck = true,
-        AimPart = "Head"
-    },
-    ESP = {
-        Enabled = false,
-        Skeletons = true,
-        Boxes = true,
-        Names = true
-    },
-    Visuals = {
-        ThirdPerson = false,
-        Distance = 10,
-        NoClip = false
-    },
-    Movement = {
-        Speed = 1.0,
-        JumpPower = 1.0,
-        AntiAim = false
-    }
+    Aimbot = {Enabled = false, FOV = 80, Smoothness = 0.1, ShowFOV = true},
+    ESP = {Enabled = false, Skeletons = true},
+    Visuals = {ThirdPerson = false, Distance = 10},
+    AntiAim = {Enabled = false}
 }
 
--- Создаем GUI через внутренние методы (обход фильтрации)
-local function CreateStealthGUI()
-    local success, result = pcall(function()
-        -- Пытаемся создать GUI через разные методы
-        local ScreenGui = Instance.new("ScreenGui")
-        ScreenGui.Name = "UI"
-        ScreenGui.Parent = game:GetService("CoreGui")
-        ScreenGui.ResetOnSpawn = false
-        
-        local MainFrame = Instance.new("Frame")
-        MainFrame.Name = "Main"
-        MainFrame.Parent = ScreenGui
-        MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-        MainFrame.BorderSizePixel = 0
-        MainFrame.Position = UDim2.new(0.5, -175, 0.5, -125)
-        MainFrame.Size = UDim2.new(0, 350, 0, 300)
-        MainFrame.Visible = true
-        MainFrame.Active = true
-        MainFrame.Draggable = true
-        
-        local UICorner = Instance.new("UICorner")
-        UICorner.CornerRadius = UDim.new(0, 8)
-        UICorner.Parent = MainFrame
-        
-        -- Заголовок
-        local Header = Instance.new("Frame")
-        Header.Name = "Header"
-        Header.Parent = MainFrame
-        Header.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-        Header.BorderSizePixel = 0
-        Header.Size = UDim2.new(1, 0, 0, 35)
-        
-        local Title = Instance.new("TextLabel")
-        Title.Name = "Title"
-        Title.Parent = Header
-        Title.BackgroundTransparency = 1
-        Title.Position = UDim2.new(0, 10, 0, 0)
-        Title.Size = UDim2.new(1, -50, 1, 0)
-        Title.Font = Enum.Font.Gotham
-        Title.Text = "Gothbreach ULTIMATE"
-        Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-        Title.TextSize = 14
-        Title.TextXAlignment = Enum.TextXAlignment.Left
-        
-        local CloseButton = Instance.new("TextButton")
-        CloseButton.Name = "Close"
-        CloseButton.Parent = Header
-        CloseButton.BackgroundTransparency = 1
-        CloseButton.Position = UDim2.new(1, -30, 0, 5)
-        CloseButton.Size = UDim2.new(0, 25, 0, 25)
-        CloseButton.Font = Enum.Font.GothamBold
-        CloseButton.Text = "X"
-        CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        CloseButton.TextSize = 14
-        
-        -- Контент
-        local Content = Instance.new("Frame")
-        Content.Name = "Content"
-        Content.Parent = MainFrame
-        Content.BackgroundTransparency = 1
-        Content.Position = UDim2.new(0, 10, 0, 45)
-        Content.Size = UDim2.new(1, -20, 1, -55)
-        
-        -- Функции для элементов
-        local function CreateToggle(name, yPos, callback)
-            local ToggleFrame = Instance.new("Frame")
-            ToggleFrame.Name = name
-            ToggleFrame.Parent = Content
-            ToggleFrame.BackgroundTransparency = 1
-            ToggleFrame.Position = UDim2.new(0, 0, 0, yPos)
-            ToggleFrame.Size = UDim2.new(1, 0, 0, 25)
-            
-            local Label = Instance.new("TextLabel")
-            Label.Name = "Label"
-            Label.Parent = ToggleFrame
-            Label.BackgroundTransparency = 1
-            Label.Position = UDim2.new(0, 0, 0, 0)
-            Label.Size = UDim2.new(0, 200, 1, 0)
-            Label.Font = Enum.Font.Gotham
-            Label.Text = name
-            Label.TextColor3 = Color3.fromRGB(255, 255, 255)
-            Label.TextSize = 12
-            Label.TextXAlignment = Enum.TextXAlignment.Left
-            
-            local Button = Instance.new("TextButton")
-            Button.Name = "Button"
-            Button.Parent = ToggleFrame
-            Button.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
-            Button.BorderSizePixel = 0
-            Button.Position = UDim2.new(1, -50, 0, 2)
-            Button.Size = UDim2.new(0, 50, 0, 21)
-            Button.Font = Enum.Font.GothamBold
-            Button.Text = "OFF"
-            Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-            Button.TextSize = 10
-            
-            local Corner = Instance.new("UICorner")
-            Corner.CornerRadius = UDim.new(0, 5)
-            Corner.Parent = Button
-            
-            local state = false
-            
-            Button.MouseButton1Click:Connect(function()
-                state = not state
-                Button.BackgroundColor3 = state and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(80, 80, 90)
-                Button.Text = state and "ON" or "OFF"
-                callback(state)
-            end)
-            
-            return ToggleFrame
-        end
-        
-        -- Создаем тогглы
-        CreateToggle("Aimbot", 0, function(state)
-            Settings.Aimbot.Enabled = state
-            InternalPrint("Aimbot: " .. (state and "ON" or "OFF"))
-        end)
-        
-        CreateToggle("ESP", 30, function(state)
-            Settings.ESP.Enabled = state
-            InternalPrint("ESP: " .. (state and "ON" or "OFF"))
-        end)
-        
-        CreateToggle("Third Person", 60, function(state)
-            Settings.Visuals.ThirdPerson = state
-            InternalPrint("Third Person: " .. (state and "ON" or "OFF"))
-        end)
-        
-        CreateToggle("Anti-Aim", 90, function(state)
-            Settings.Movement.AntiAim = state
-            InternalPrint("Anti-Aim: " .. (state and "ON" or "OFF"))
-        end)
-        
-        -- Кнопка выхода
-        local ExitButton = Instance.new("TextButton")
-        ExitButton.Name = "Exit"
-        ExitButton.Parent = Content
-        ExitButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        ExitButton.BorderSizePixel = 0
-        ExitButton.Position = UDim2.new(0, 0, 1, -30)
-        ExitButton.Size = UDim2.new(1, 0, 0, 25)
-        ExitButton.Font = Enum.Font.GothamBold
-        ExitButton.Text = "EXIT"
-        ExitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        ExitButton.TextSize = 12
-        
-        local ExitCorner = Instance.new("UICorner")
-        ExitCorner.CornerRadius = UDim.new(0, 5)
-        ExitCorner.Parent = ExitButton
-        
-        -- Обработчики
-        CloseButton.MouseButton1Click:Connect(function()
-            ScreenGui.Enabled = false
-        end)
-        
-        ExitButton.MouseButton1Click:Connect(function()
-            ScreenGui:Destroy()
-            InternalPrint("Cheat exited")
-        end)
-        
-        -- Бинд на скрытие
-        UserInputService.InputBegan:Connect(function(input, gameProcessed)
-            if gameProcessed then return end
-            if input.KeyCode == Enum.KeyCode.RightShift then
-                MainFrame.Visible = not MainFrame.Visible
-            end
-        end)
-        
-        return ScreenGui
+-- Создаем красивое GUI с правильным расположением
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "GothbreachGUI"
+ScreenGui.Parent = game.CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -150)
+MainFrame.Size = UDim2.new(0, 350, 0, 350)
+MainFrame.Visible = true
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+-- Заголовок
+local Header = Instance.new("Frame")
+Header.Name = "Header"
+Header.Parent = MainFrame
+Header.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+Header.BorderSizePixel = 0
+Header.Size = UDim2.new(1, 0, 0, 40)
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 12)
+HeaderCorner.Parent = Header
+
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Parent = Header
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.Size = UDim2.new(0, 200, 1, 0)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "Gothbreach Premium"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Parent = Header
+CloseButton.BackgroundTransparency = 1
+CloseButton.Position = UDim2.new(1, -30, 0, 10)
+CloseButton.Size = UDim2.new(0, 20, 0, 20)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.Text = "×"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextSize = 18
+
+-- Вкладки
+local TabContainer = Instance.new("Frame")
+TabContainer.Name = "TabContainer"
+TabContainer.Parent = MainFrame
+TabContainer.BackgroundTransparency = 1
+TabContainer.Position = UDim2.new(0, 0, 0, 45)
+TabContainer.Size = UDim2.new(1, 0, 0, 30)
+
+local Tabs = {"Aimbot", "Visuals", "Movement"}
+local CurrentTab = "Aimbot"
+
+local function CreateTabButton(name, xPos)
+    local TabButton = Instance.new("TextButton")
+    TabButton.Name = name .. "Tab"
+    TabButton.Parent = TabContainer
+    TabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    TabButton.BorderSizePixel = 0
+    TabButton.Position = UDim2.new(xPos, 0, 0, 0)
+    TabButton.Size = UDim2.new(0.333, 0, 1, 0)
+    TabButton.Font = Enum.Font.Gotham
+    TabButton.Text = name
+    TabButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+    TabButton.TextSize = 12
+    
+    TabButton.MouseButton1Click:Connect(function()
+        CurrentTab = name
+        UpdateTabDisplay()
     end)
     
-    if not success then
-        InternalPrint("GUI creation failed, using fallback")
-        -- Fallback: простой вывод в консоль
-        InternalPrint("Gothbreach ULTIMATE Loaded!")
-        InternalPrint("RightShift - Toggle Features")
-        InternalPrint("Aimbot: OFF | ESP: OFF | ThirdPerson: OFF")
-    end
+    return TabButton
 end
 
--- Мощный аимбот с проверкой стен
+-- Создаем кнопки вкладок
+local AimbotTabBtn = CreateTabButton("Aimbot", 0)
+local VisualsTabBtn = CreateTabButton("Visuals", 0.333)
+local MovementTabBtn = CreateTabButton("Movement", 0.666)
+
+-- Контейнер контента с ScrollingFrame
+local ContentScrollingFrame = Instance.new("ScrollingFrame")
+ContentScrollingFrame.Name = "ContentScrollingFrame"
+ContentScrollingFrame.Parent = MainFrame
+ContentScrollingFrame.BackgroundTransparency = 1
+ContentScrollingFrame.Position = UDim2.new(0, 10, 0, 80)
+ContentScrollingFrame.Size = UDim2.new(1, -20, 1, -90)
+ContentScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ContentScrollingFrame.ScrollBarThickness = 3
+ContentScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+local ContentLayout = Instance.new("UIListLayout")
+ContentLayout.Parent = ContentScrollingFrame
+ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ContentLayout.Padding = UDim.new(0, 10)
+
+-- Функция создания тогглов
+function CreateToggle(name, defaultState, callback)
+    local ToggleFrame = Instance.new("Frame")
+    ToggleFrame.Name = name .. "Toggle"
+    ToggleFrame.Parent = ContentScrollingFrame
+    ToggleFrame.BackgroundTransparency = 1
+    ToggleFrame.Size = UDim2.new(1, 0, 0, 30)
+    ToggleFrame.LayoutOrder = #ContentScrollingFrame:GetChildren()
+
+    local ToggleLabel = Instance.new("TextLabel")
+    ToggleLabel.Name = "Label"
+    ToggleLabel.Parent = ToggleFrame
+    ToggleLabel.BackgroundTransparency = 1
+    ToggleLabel.Position = UDim2.new(0, 0, 0, 0)
+    ToggleLabel.Size = UDim2.new(0, 200, 1, 0)
+    ToggleLabel.Font = Enum.Font.Gotham
+    ToggleLabel.Text = name
+    ToggleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ToggleLabel.TextSize = 13
+    ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    local ToggleButton = Instance.new("TextButton")
+    ToggleButton.Name = "Button"
+    ToggleButton.Parent = ToggleFrame
+    ToggleButton.BackgroundColor3 = defaultState and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(80, 80, 90)
+    ToggleButton.BorderSizePixel = 0
+    ToggleButton.Position = UDim2.new(1, -60, 0, 5)
+    ToggleButton.Size = UDim2.new(0, 60, 0, 20)
+    ToggleButton.Font = Enum.Font.GothamBold
+    ToggleButton.Text = defaultState and "ON" or "OFF"
+    ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ToggleButton.TextSize = 11
+
+    local ToggleCorner = Instance.new("UICorner")
+    ToggleCorner.CornerRadius = UDim.new(0, 10)
+    ToggleCorner.Parent = ToggleButton
+
+    local state = defaultState
+
+    ToggleButton.MouseButton1Click:Connect(function()
+        state = not state
+        ToggleButton.BackgroundColor3 = state and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(80, 80, 90)
+        ToggleButton.Text = state and "ON" or "OFF"
+        callback(state)
+    end)
+
+    return ToggleFrame
+end
+
+-- Функция создания слайдеров
+function CreateSlider(name, min, max, default, callback)
+    local SliderFrame = Instance.new("Frame")
+    SliderFrame.Name = name .. "Slider"
+    SliderFrame.Parent = ContentScrollingFrame
+    SliderFrame.BackgroundTransparency = 1
+    SliderFrame.Size = UDim2.new(1, 0, 0, 60)
+    SliderFrame.LayoutOrder = #ContentScrollingFrame:GetChildren()
+
+    local SliderLabel = Instance.new("TextLabel")
+    SliderLabel.Name = "Label"
+    SliderLabel.Parent = SliderFrame
+    SliderLabel.BackgroundTransparency = 1
+    SliderLabel.Position = UDim2.new(0, 0, 0, 0)
+    SliderLabel.Size = UDim2.new(0, 200, 0, 20)
+    SliderLabel.Font = Enum.Font.Gotham
+    SliderLabel.Text = name
+    SliderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SliderLabel.TextSize = 13
+    SliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    local ValueLabel = Instance.new("TextLabel")
+    ValueLabel.Name = "Value"
+    ValueLabel.Parent = SliderFrame
+    ValueLabel.BackgroundTransparency = 1
+    ValueLabel.Position = UDim2.new(1, -40, 0, 0)
+    ValueLabel.Size = UDim2.new(0, 40, 0, 20)
+    ValueLabel.Font = Enum.Font.Gotham
+    ValueLabel.Text = tostring(default)
+    ValueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ValueLabel.TextSize = 13
+    ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+    local SliderTrack = Instance.new("Frame")
+    SliderTrack.Name = "Track"
+    SliderTrack.Parent = SliderFrame
+    SliderTrack.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    SliderTrack.BorderSizePixel = 0
+    SliderTrack.Position = UDim2.new(0, 0, 0, 30)
+    SliderTrack.Size = UDim2.new(1, 0, 0, 6)
+
+    local TrackCorner = Instance.new("UICorner")
+    TrackCorner.CornerRadius = UDim.new(0, 3)
+    TrackCorner.Parent = SliderTrack
+
+    local SliderFill = Instance.new("Frame")
+    SliderFill.Name = "Fill"
+    SliderFill.Parent = SliderTrack
+    SliderFill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    SliderFill.BorderSizePixel = 0
+    SliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+
+    local FillCorner = Instance.new("UICorner")
+    FillCorner.CornerRadius = UDim.new(0, 3)
+    FillCorner.Parent = SliderFill
+
+    local SliderButton = Instance.new("TextButton")
+    SliderButton.Name = "Button"
+    SliderButton.Parent = SliderTrack
+    SliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    SliderButton.BorderSizePixel = 0
+    SliderButton.Position = UDim2.new((default - min) / (max - min), -8, 0, -5)
+    SliderButton.Size = UDim2.new(0, 16, 0, 16)
+    SliderButton.Text = ""
+
+    local ButtonCorner = Instance.new("UICorner")
+    ButtonCorner.CornerRadius = UDim.new(1, 0)
+    ButtonCorner.Parent = SliderButton
+
+    local dragging = false
+    local value = default
+
+    local function UpdateSlider(newValue)
+        value = math.clamp(newValue, min, max)
+        local percent = (value - min) / (max - min)
+        SliderFill.Size = UDim2.new(percent, 0, 1, 0)
+        SliderButton.Position = UDim2.new(percent, -8, 0, -5)
+        ValueLabel.Text = tostring(math.floor(value))
+        callback(value)
+    end
+
+    SliderButton.MouseButton1Down:Connect(function()
+        dragging = true
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mousePos = UserInputService:GetMouseLocation()
+            local relativeX = mousePos.X - SliderTrack.AbsolutePosition.X
+            local percent = math.clamp(relativeX / SliderTrack.AbsoluteSize.X, 0, 1)
+            local newValue = min + (max - min) * percent
+            UpdateSlider(newValue)
+        end
+    end)
+
+    SliderTrack.MouseButton1Down:Connect(function(x, y)
+        local relativeX = x - SliderTrack.AbsolutePosition.X
+        local percent = math.clamp(relativeX / SliderTrack.AbsoluteSize.X, 0, 1)
+        local newValue = min + (max - min) * percent
+        UpdateSlider(newValue)
+    end)
+
+    return SliderFrame
+end
+
+-- Создаем элементы для каждой вкладки
+local AimbotElements = {}
+local VisualsElements = {}
+local MovementElements = {}
+
+-- Aimbot Tab Elements
+AimbotElements.Toggle1 = CreateToggle("Enable Aimbot", false, function(state)
+    Settings.Aimbot.Enabled = state
+    print("Aimbot:", state and "ON" or "OFF")
+end)
+
+AimbotElements.Toggle2 = CreateToggle("Show FOV Circle", true, function(state)
+    Settings.Aimbot.ShowFOV = state
+    print("FOV Circle:", state and "ON" or "OFF")
+end)
+
+AimbotElements.Slider1 = CreateSlider("FOV Size", 20, 150, 80, function(value)
+    Settings.Aimbot.FOV = value
+    print("FOV Size:", value)
+end)
+
+AimbotElements.Slider2 = CreateSlider("Smoothness", 1, 50, 10, function(value)
+    Settings.Aimbot.Smoothness = value / 100
+    print("Smoothness:", value)
+end)
+
+-- Visuals Tab Elements
+VisualsElements.Toggle1 = CreateToggle("Enable ESP", false, function(state)
+    Settings.ESP.Enabled = state
+    print("ESP:", state and "ON" or "OFF")
+end)
+
+VisualsElements.Toggle2 = CreateToggle("Show Skeletons", true, function(state)
+    Settings.ESP.Skeletons = state
+    print("Skeletons:", state and "ON" or "OFF")
+end)
+
+VisualsElements.Toggle3 = CreateToggle("Third Person", false, function(state)
+    Settings.Visuals.ThirdPerson = state
+    print("Third Person:", state and "ON" or "OFF")
+end)
+
+VisualsElements.Slider1 = CreateSlider("TP Distance", 5, 20, 10, function(value)
+    Settings.Visuals.Distance = value
+    print("TP Distance:", value)
+end)
+
+-- Movement Tab Elements
+MovementElements.Toggle1 = CreateToggle("Anti-Aim Protection", false, function(state)
+    Settings.AntiAim.Enabled = state
+    print("Anti-Aim:", state and "ON" or "OFF")
+end)
+
+-- Функция обновления отображения вкладок
+function UpdateTabDisplay()
+    for _, element in pairs(AimbotElements) do
+        element.Visible = (CurrentTab == "Aimbot")
+    end
+    for _, element in pairs(VisualsElements) do
+        element.Visible = (CurrentTab == "Visuals")
+    end
+    for _, element in pairs(MovementElements) do
+        element.Visible = (CurrentTab == "Movement")
+    end
+    
+    -- Обновляем подсветку кнопок вкладок
+    AimbotTabBtn.BackgroundColor3 = (CurrentTab == "Aimbot") and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(40, 40, 50)
+    VisualsTabBtn.BackgroundColor3 = (CurrentTab == "Visuals") and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(40, 40, 50)
+    MovementTabBtn.BackgroundColor3 = (CurrentTab == "Movement") and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(40, 40, 50)
+    
+    AimbotTabBtn.TextColor3 = (CurrentTab == "Aimbot") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 200)
+    VisualsTabBtn.TextColor3 = (CurrentTab == "Visuals") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 200)
+    MovementTabBtn.TextColor3 = (CurrentTab == "Movement") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 200)
+end
+
+-- Закрытие GUI
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- Бинд на скрытие GUI
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        MainFrame.Visible = not MainFrame.Visible
+    end
+end)
+
+-- Инициализация
+UpdateTabDisplay()
+
+-- Простой FOV круг для демонстрации
 local FOVCircle = Drawing.new("Circle")
-FOVCircle.Visible = false
+FOVCircle.Visible = Settings.Aimbot.ShowFOV
 FOVCircle.Thickness = 2
-FOVCircle.Color = Color3.fromRGB(0, 255, 0)
+FOVCircle.Color = Color3.fromRGB(0, 170, 255)
 FOVCircle.Filled = false
 FOVCircle.Radius = Settings.Aimbot.FOV
 FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
-function UpdateFOVCircle()
+-- Обновление FOV круга
+RunService.RenderStepped:Connect(function()
     FOVCircle.Visible = Settings.Aimbot.ShowFOV and Settings.Aimbot.Enabled
     FOVCircle.Radius = Settings.Aimbot.FOV
     FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    FOVCircle.Color = Settings.Aimbot.Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-end
-
--- Проверка видимости через Raycast
-function IsVisible(targetPart)
-    if not Settings.Aimbot.WallCheck then return true end
-    if not LocalPlayer.Character then return false end
-    
-    local origin = LocalPlayer.Character:FindFirstChild("Head")
-    if not origin then return false end
-    
-    local direction = (targetPart.Position - origin.Position).Unit
-    local raycastParams = RaycastParams.new()
-    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
-    
-    local result = workspace:Raycast(origin.Position, direction * 1000, raycastParams)
-    return not result or result.Instance:IsDescendantOf(targetPart.Parent)
-end
-
--- Аимбот
-function StartAimbot()
-    RunService.RenderStepped:Connect(function()
-        if not Settings.Aimbot.Enabled then return end
-        if not LocalPlayer.Character then return end
-        
-        local closestTarget = nil
-        local closestDistance = Settings.Aimbot.FOV
-        local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-        
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
-                if Settings.Aimbot.TeamCheck and player.Team == LocalPlayer.Team then
-                    continue
-                end
-                
-                local targetPart = player.Character:FindFirstChild(Settings.Aimbot.AimPart)
-                if targetPart and IsVisible(targetPart) then
-                    local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-                    
-                    if onScreen then
-                        local pos = Vector2.new(screenPos.X, screenPos.Y)
-                        local distance = (center - pos).Magnitude
-                        
-                        if distance < closestDistance then
-                            closestDistance = distance
-                            closestTarget = targetPart
-                        end
-                    end
-                end
-            end
-        end
-        
-        if closestTarget then
-            local currentCF = Camera.CFrame
-            local targetCF = CFrame.lookAt(currentCF.Position, closestTarget.Position)
-            Camera.CFrame = currentCF:Lerp(targetCF, Settings.Aimbot.Smoothness)
-        end
-    end)
-end
-
--- ESP через Drawing (обход античита)
-local ESPObjects = {}
-
-function UpdateESP()
-    -- Очистка
-    for _, drawings in pairs(ESPObjects) do
-        for _, drawing in pairs(drawings) do
-            drawing:Remove()
-        end
-    end
-    ESPObjects = {}
-    
-    if not Settings.ESP.Enabled then return end
-    
-    -- Создание ESP
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            if Settings.Aimbot.TeamCheck and player.Team == LocalPlayer.Team then
-                continue
-            end
-            
-            local drawings = {}
-            
-            -- Бокс
-            if Settings.ESP.Boxes then
-                local box = Drawing.new("Square")
-                box.Visible = false
-                box.Thickness = 2
-                box.Color = Color3.fromRGB(255, 0, 0)
-                box.Filled = false
-                drawings.Box = box
-            end
-            
-            -- Скелет
-            if Settings.ESP.Skeletons then
-                local bones = {
-                    {"Head", "UpperTorso"},
-                    {"UpperTorso", "LowerTorso"},
-                    {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"},
-                    {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"},
-                    {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"},
-                    {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}
-                }
-                
-                for _, bonePair in pairs(bones) do
-                    local line = Drawing.new("Line")
-                    line.Visible = false
-                    line.Thickness = 1
-                    line.Color = Color3.fromRGB(255, 0, 0)
-                    drawings[bonePair[1].."_"..bonePair[2]] = line
-                end
-            end
-            
-            ESPObjects[player] = drawings
-        end
-    end
-end
-
--- Third Person
-function UpdateThirdPerson()
-    if Settings.Visuals.ThirdPerson then
-        RunService:BindToRenderStep("ThirdPerson", Enum.RenderPriority.Camera.Value, function()
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                local root = LocalPlayer.Character.HumanoidRootPart
-                Camera.CFrame = CFrame.new(
-                    root.Position - root.CFrame.LookVector * Settings.Visuals.Distance,
-                    root.Position
-                )
-            end
-        end)
-    else
-        RunService:UnbindFromRenderStep("ThirdPerson")
-    end
-end
-
--- Anti-Aim
-function UpdateAntiAim()
-    if Settings.Movement.AntiAim then
-        RunService:BindToRenderStep("AntiAim", Enum.RenderPriority.Character.Value, function()
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") then
-                local head = LocalPlayer.Character.Head
-                local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                if root then
-                    head.CFrame = root.CFrame * CFrame.new(0, 1.5, 0)
-                end
-            end
-        end)
-    else
-        RunService:UnbindFromRenderStep("AntiAim")
-    end
-end
-
--- Запуск
-CreateStealthGUI()
-StartAimbot()
-
--- Обновление ESP в реальном времени
-RunService.RenderStepped:Connect(function()
-    UpdateFOVCircle()
-    
-    for player, drawings in pairs(ESPObjects) do
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local root = player.Character.HumanoidRootPart
-            local head = player.Character:FindFirstChild("Head")
-            
-            if head then
-                local headPos, headVisible = Camera:WorldToViewportPoint(head.Position)
-                
-                if headVisible then
-                    -- Обновление бокса
-                    if drawings.Box then
-                        local feetPos = Camera:WorldToViewportPoint(root.Position + Vector3.new(0, -3, 0))
-                        local height = math.abs(feetPos.Y - headPos.Y)
-                        local width = height / 2
-                        
-                        drawings.Box.Size = Vector2.new(width, height)
-                        drawings.Box.Position = Vector2.new(headPos.X - width/2, headPos.Y)
-                        drawings.Box.Visible = true
-                    end
-                    
-                    -- Обновление скелета
-                    for boneName, line in pairs(drawings) do
-                        if boneName ~= "Box" then
-                            local bones = boneName:split("_")
-                            local fromPart = player.Character:FindFirstChild(bones[1])
-                            local toPart = player.Character:FindFirstChild(bones[2])
-                            
-                            if fromPart and toPart then
-                                local fromPos = Camera:WorldToViewportPoint(fromPart.Position)
-                                local toPos = Camera:WorldToViewportPoint(toPart.Position)
-                                
-                                line.From = Vector2.new(fromPos.X, fromPos.Y)
-                                line.To = Vector2.new(toPos.X, toPos.Y)
-                                line.Visible = true
-                            else
-                                line.Visible = false
-                            end
-                        end
-                    end
-                else
-                    -- Скрыть если не видно
-                    for _, drawing in pairs(drawings) do
-                        drawing.Visible = false
-                    end
-                end
-            end
-        else
-            -- Очистка если игрок умер
-            for _, drawing in pairs(drawings) do
-                drawing:Remove()
-            end
-            ESPObjects[player] = nil
-        end
-    end
+    FOVCircle.Color = Settings.Aimbot.Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 170, 255)
 end)
 
-InternalPrint("Gothbreach ULTIMATE v5.0 LOADED!")
-InternalPrint("Using internal methods for anti-cheat bypass")
-InternalPrint("RightShift - Toggle GUI | Features ready!")
+print("🎯 Gothbreach Premium v2.1 LOADED!")
+print("RightShift - Hide/Show GUI")
+print("Beautiful organized GUI with proper layout!")
