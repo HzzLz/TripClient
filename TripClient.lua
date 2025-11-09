@@ -1,12 +1,9 @@
--- Gothbreach Neverlose Cheat v6.0
+-- Gothbreach RAGE Cheat v7.0 (Silent Aim + WallCheck)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
-
--- Вставляем твою библиотеку Neverlose здесь
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/your-repo/neverlose.lua"))() -- Замени на актуальный путь
 
 -- Настройки чита
 local CheatSettings = {
@@ -15,8 +12,12 @@ local CheatSettings = {
         TeamCheck = true,
         WallCheck = true,
         FOV = 80,
+        MaxFOV = 500, -- Увеличенный FOV
         Smoothness = 0.1,
-        AimPart = "Head"
+        AimPart = "Head",
+        SilentAim = false, -- Новый Silent Aim
+        HitChance = 100, -- Шанс попадания для Silent Aim
+        TriggerKey = "MouseButton2" -- Клавиша для Silent Aim
     },
     ESP = {
         Enabled = false,
@@ -25,7 +26,8 @@ local CheatSettings = {
     },
     Visuals = {
         ThirdPerson = false,
-        Distance = 10
+        Distance = 10,
+        FOVCircle = true
     },
     Movement = {
         AntiAim = false,
@@ -35,7 +37,7 @@ local CheatSettings = {
 
 -- Создаем окно Neverlose
 local Window = Library:Window({
-    text = "Gothbreach " .. NeverloseVersion
+    text = "Gothbreach RAGE"
 })
 
 -- Создаем вкладки
@@ -60,7 +62,7 @@ local AimbotSection = LegitTab:Tab({
     text = "Aimbot",
     icon = "rbxassetid://7999345313"
 }):Section({
-    text = "Aimbot"
+    text = "Legit Aimbot"
 })
 
 AimbotSection:Toggle({
@@ -91,7 +93,7 @@ AimbotSection:Toggle({
 AimbotSection:Slider({
     text = "FOV Size",
     min = 20,
-    max = 150,
+    max = CheatSettings.Aimbot.MaxFOV,
     float = 1,
     callback = function(value)
         CheatSettings.Aimbot.FOV = value
@@ -115,6 +117,67 @@ AimbotSection:Dropdown({
     list = {"Head", "UpperTorso", "HumanoidRootPart"},
     callback = function(value)
         CheatSettings.Aimbot.AimPart = value
+    end
+})
+
+-- Rage Tab
+local SilentAimSection = RageTab:Tab({
+    text = "Silent Aim",
+    icon = "rbxassetid://8010116979"
+}):Section({
+    text = "Silent Aim"
+})
+
+SilentAimSection:Toggle({
+    text = "Enable Silent Aim",
+    state = false,
+    callback = function(state)
+        CheatSettings.Aimbot.SilentAim = state
+    end
+})
+
+SilentAimSection:Slider({
+    text = "Hit Chance",
+    min = 0,
+    max = 100,
+    float = 1,
+    callback = function(value)
+        CheatSettings.Aimbot.HitChance = value
+    end
+})
+
+SilentAimSection:Toggle({
+    text = "Team Check",
+    state = true,
+    callback = function(state)
+        CheatSettings.Aimbot.TeamCheck = state
+    end
+})
+
+SilentAimSection:Toggle({
+    text = "Wall Check",
+    state = true,
+    callback = function(state)
+        CheatSettings.Aimbot.WallCheck = state
+    end
+})
+
+SilentAimSection:Slider({
+    text = "FOV Size",
+    min = 20,
+    max = CheatSettings.Aimbot.MaxFOV,
+    float = 1,
+    callback = function(value)
+        CheatSettings.Aimbot.FOV = value
+        UpdateFOVCircle()
+    end
+})
+
+SilentAimSection:Keybind({
+    text = "Trigger Key",
+    default = Enum.KeyCode.MouseButton2,
+    callback = function(key)
+        CheatSettings.Aimbot.TriggerKey = key.Name
     end
 })
 
@@ -166,6 +229,15 @@ VisualsSection:Toggle({
     callback = function(state)
         CheatSettings.Visuals.ThirdPerson = state
         UpdateThirdPerson()
+    end
+})
+
+VisualsSection:Toggle({
+    text = "Show FOV Circle",
+    state = true,
+    callback = function(state)
+        CheatSettings.Visuals.FOVCircle = state
+        UpdateFOVCircle()
     end
 })
 
@@ -241,18 +313,19 @@ ConfigSection:Keybind({
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Visible = false
 FOVCircle.Thickness = 2
-FOVCircle.Color = Color3.fromRGB(0, 170, 255)
+FOVCircle.Color = Color3.fromRGB(255, 50, 50)
 FOVCircle.Filled = false
 FOVCircle.Radius = CheatSettings.Aimbot.FOV
 FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
 function UpdateFOVCircle()
-    FOVCircle.Visible = CheatSettings.Aimbot.Enabled
+    FOVCircle.Visible = CheatSettings.Visuals.FOVCircle and (CheatSettings.Aimbot.Enabled or CheatSettings.Aimbot.SilentAim)
     FOVCircle.Radius = CheatSettings.Aimbot.FOV
     FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    FOVCircle.Color = CheatSettings.Aimbot.SilentAim and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(0, 170, 255)
 end
 
--- Проверка видимости
+-- Улучшенная проверка видимости
 function IsVisible(targetPart)
     if not CheatSettings.Aimbot.WallCheck then return true end
     if not LocalPlayer.Character then return false end
@@ -266,10 +339,52 @@ function IsVisible(targetPart)
     raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
     
     local result = workspace:Raycast(origin.Position, direction * 1000, raycastParams)
-    return not result or result.Instance:IsDescendantOf(targetPart.Parent)
+    
+    if result then
+        local hitPart = result.Instance
+        -- Проверяем что попали в нужного игрока
+        return hitPart:IsDescendantOf(targetPart.Parent)
+    end
+    
+    return true
 end
 
--- Аимбот
+-- Проверка команды
+function IsEnemy(player)
+    if not CheatSettings.Aimbot.TeamCheck then return true end
+    if not player.Team then return true end
+    return player.Team ~= LocalPlayer.Team
+end
+
+-- Поиск цели
+function FindTarget()
+    local closestTarget = nil
+    local closestDistance = CheatSettings.Aimbot.FOV
+    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and IsEnemy(player) then
+            local targetPart = player.Character:FindFirstChild(CheatSettings.Aimbot.AimPart)
+            if targetPart and IsVisible(targetPart) then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+                
+                if onScreen then
+                    local pos = Vector2.new(screenPos.X, screenPos.Y)
+                    local distance = (center - pos).Magnitude
+                    
+                    if distance < closestDistance then
+                        closestDistance = distance
+                        closestTarget = targetPart
+                    end
+                end
+            end
+        end
+    end
+    
+    return closestTarget
+end
+
+-- Обычный аимбот
 local aimbotConnection
 function StartAimbot()
     if aimbotConnection then aimbotConnection:Disconnect() end
@@ -278,40 +393,56 @@ function StartAimbot()
         if not CheatSettings.Aimbot.Enabled then return end
         if not LocalPlayer.Character then return end
         
-        local closestTarget = nil
-        local closestDistance = CheatSettings.Aimbot.FOV
-        local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        local target = FindTarget()
+        if target then
+            local currentCF = Camera.CFrame
+            local targetCF = CFrame.lookAt(currentCF.Position, target.Position)
+            Camera.CFrame = currentCF:Lerp(targetCF, CheatSettings.Aimbot.Smoothness)
+        end
+    end)
+end
+
+-- Silent Aim система
+local silentAimTarget = nil
+
+-- Перехват выстрелов для Silent Aim
+local mt = getrawmetatable(game)
+local oldNamecall = mt.__namecall
+
+if setreadonly then setreadonly(mt, false) end
+
+mt.__namecall = newcclosure(function(...)
+    local method = getnamecallmethod()
+    local args = {...}
+    
+    -- Перехватываем методы связанные с выстрелами
+    if CheatSettings.Aimbot.SilentAim and (method == "FireServer" or method == "InvokeServer") then
+        local remoteName = tostring(args[1])
         
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
-                if CheatSettings.Aimbot.TeamCheck and player.Team == LocalPlayer.Team then
-                    continue
-                end
-                
-                local targetPart = player.Character:FindFirstChild(CheatSettings.Aimbot.AimPart)
-                if targetPart and IsVisible(targetPart) then
-                    local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-                    
-                    if onScreen then
-                        local pos = Vector2.new(screenPos.X, screenPos.Y)
-                        local distance = (center - pos).Magnitude
-                        
-                        if distance < closestDistance then
-                            closestDistance = distance
-                            closestTarget = targetPart
+        -- Проверяем что это выстрел (адаптируй под свою игру)
+        if remoteName:find("Hit") or remoteName:find("Damage") or remoteName:find("Shoot") then
+            -- Проверяем шанс попадания
+            if math.random(1, 100) <= CheatSettings.Aimbot.HitChance then
+                -- Проверяем нажата ли клавиша триггера
+                local triggerKey = Enum.KeyCode[CheatSettings.Aimbot.TriggerKey]
+                if UserInputService:IsKeyDown(triggerKey) then
+                    local target = FindTarget()
+                    if target then
+                        -- Модифицируем аргументы чтобы попасть в цель
+                        -- (это нужно адаптировать под конкретную игру)
+                        if args[2] then -- обычно второй аргумент - позиция попадания
+                            args[2] = target.Position
                         end
                     end
                 end
             end
         end
-        
-        if closestTarget then
-            local currentCF = Camera.CFrame
-            local targetCF = CFrame.lookAt(currentCF.Position, closestTarget.Position)
-            Camera.CFrame = currentCF:Lerp(targetCF, CheatSettings.Aimbot.Smoothness)
-        end
-    end)
-end
+    end
+    
+    return oldNamecall(unpack(args))
+end)
+
+if setreadonly then setreadonly(mt, true) end
 
 -- ESP система
 local ESPObjects = {}
@@ -329,11 +460,7 @@ function UpdateESP()
     
     -- Создание ESP
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            if CheatSettings.Aimbot.TeamCheck and player.Team == LocalPlayer.Team then
-                continue
-            end
-            
+        if player ~= LocalPlayer and player.Character and IsEnemy(player) then
             local drawings = {}
             
             -- Бокс
@@ -341,7 +468,7 @@ function UpdateESP()
                 local box = Drawing.new("Square")
                 box.Visible = false
                 box.Thickness = 2
-                box.Color = Color3.fromRGB(0, 170, 255)
+                box.Color = Color3.fromRGB(255, 50, 50)
                 box.Filled = false
                 drawings.Box = box
             end
@@ -361,7 +488,7 @@ function UpdateESP()
                     local line = Drawing.new("Line")
                     line.Visible = false
                     line.Thickness = 1
-                    line.Color = Color3.fromRGB(0, 170, 255)
+                    line.Color = Color3.fromRGB(255, 50, 50)
                     drawings[bonePair[1].."_"..bonePair[2]] = line
                 end
             end
@@ -482,8 +609,8 @@ function SaveConfig()
     }
     
     if writefile then
-        writefile("gothbreach_config.json", game:GetService("HttpService"):JSONEncode(config))
-        Library:Notify("Config", "Configuration saved!")
+        writefile("gothbreach_rage_config.json", game:GetService("HttpService"):JSONEncode(config))
+        Library:Notify("Config", "Rage configuration saved!")
     else
         Library:Notify("Config", "Your exploit doesn't support file operations")
     end
@@ -492,7 +619,7 @@ end
 function LoadConfig()
     if readfile then
         local success, config = pcall(function()
-            return game:GetService("HttpService"):JSONDecode(readfile("gothbreach_config.json"))
+            return game:GetService("HttpService"):JSONDecode(readfile("gothbreach_rage_config.json"))
         end)
         
         if success then
@@ -508,9 +635,9 @@ function LoadConfig()
             UpdateAntiAim()
             UpdateSpeed()
             
-            Library:Notify("Config", "Configuration loaded!")
+            Library:Notify("Config", "Rage configuration loaded!")
         else
-            Library:Notify("Config", "No config file found")
+            Library:Notify("Config", "No rage config file found")
         end
     else
         Library:Notify("Config", "Your exploit doesn't support file operations")
@@ -521,6 +648,6 @@ end
 StartAimbot()
 UpdateESP()
 
-print("🎯 Gothbreach Neverlose " .. NeverloseVersion .. " LOADED!")
-print("RightShift - Toggle Menu")
-print("Professional Neverlose interface with full functionality!")
+print("🎯 Gothbreach RAGE v7.0 LOADED!")
+print("Features: Silent Aim, WallCheck, TeamCheck, Huge FOV")
+print("RightShift - Toggle Menu | MouseButton2 - Silent Aim")
